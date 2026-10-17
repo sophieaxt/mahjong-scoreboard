@@ -11,7 +11,7 @@
 :root{
   --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#e2e8f0;
   --muted:#94a3b8; --accent:#f59e0b; --green:#22c55e; --red:#ef4444;
-  --riichi:#ef4444;
+  --riichi:#ef4444; --gold:#fbbf24;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);
@@ -47,6 +47,14 @@ header{position:sticky;top:0;z-index:10;background:var(--bg);
   background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);
   border-radius:8px}
 .end-banner-actions button.primary{background:var(--accent);color:#111;border-color:var(--accent)}
+
+.day-banner{display:none;margin:8px 12px;padding:10px 12px;border-radius:10px;
+  background:linear-gradient(135deg,#14532d,#166534);color:#fff;
+  font-size:14px;font-weight:700;text-align:center;border:1px solid #22c55e}
+.day-banner.show{display:block}
+.day-banner button{margin-top:8px;padding:8px 16px;font-size:13px;font-weight:700;
+  background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);
+  border-radius:8px}
 
 .players{padding:12px;display:flex;flex-direction:column;gap:8px}
 .player{background:var(--card);border:1px solid var(--line);border-radius:12px;
@@ -105,9 +113,11 @@ header{position:sticky;top:0;z-index:10;background:var(--bg);
 .rec button{background:transparent;border:1px solid var(--line);color:var(--muted);
   border-radius:8px;padding:4px 8px;font-size:12px;flex-shrink:0;margin-left:8px}
 
-.toolbar{display:flex;gap:8px;padding:0 12px 12px;flex-wrap:wrap}
-.toolbar button{flex:1;min-width:60px;padding:10px;background:var(--card);
-  border:1px solid var(--line);color:var(--text);border-radius:10px;font-size:13px}
+.toolbar{display:flex;gap:6px;padding:0 12px 12px;flex-wrap:wrap}
+.toolbar button{flex:1;min-width:55px;padding:9px 4px;background:var(--card);
+  border:1px solid var(--line);color:var(--text);border-radius:10px;font-size:12px}
+.toolbar button.end-day{background:#7f1d1d;border-color:#dc2626;color:#fff;font-weight:700}
+.toolbar button.end-day.new-day{background:#14532d;border-color:#22c55e}
 
 form.input{position:fixed;left:0;right:0;bottom:0;z-index:20;
   background:#111827;border-top:1px solid var(--line);
@@ -211,6 +221,22 @@ form.input.locked{opacity:.4;pointer-events:none}
 .history-item .hi-settle-pos{color:var(--green)}
 .history-item .hi-settle-neg{color:var(--red)}
 .history-empty{text-align:center;color:var(--muted);padding:20px;font-size:13px}
+
+.day-summary-date{font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px}
+.ds-row{display:flex;align-items:center;gap:10px;padding:10px;
+  border:1px solid var(--line);border-radius:10px;margin-bottom:8px;
+  background:rgba(255,255,255,.02)}
+.ds-row.rank1{border-color:var(--gold);background:rgba(251,191,36,.08);
+  box-shadow:0 0 0 1px rgba(251,191,36,.3)}
+.ds-rank{font-size:22px;font-weight:800;width:30px;text-align:center;color:var(--muted)}
+.ds-row.rank1 .ds-rank{color:var(--gold)}
+.ds-info{flex:1;min-width:0}
+.ds-name{font-weight:700;font-size:14px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.ds-stats{font-size:11px;color:var(--muted);margin-top:2px}
+.ds-total{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.ds-total.pos{color:var(--green)}
+.ds-total.neg{color:var(--red)}
 </style>
 </head>
 <body>
@@ -236,6 +262,11 @@ form.input.locked{opacity:.4;pointer-events:none}
   </div>
 </div>
 
+<div class="day-banner" id="dayBanner">
+  <div id="dayBannerText">🏆 今日比赛已完场</div>
+  <button type="button" id="btnShowDaySummary">查看总战绩</button>
+</div>
+
 <div class="players" id="players"></div>
 
 <div class="history">
@@ -247,6 +278,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     <button id="btnExport">导出</button>
     <button id="btnImport">导入</button>
     <button id="btnUndo">撤销</button>
+    <button id="btnEndDay" class="end-day">完场</button>
   </div>
 </div>
 
@@ -309,6 +341,18 @@ form.input.locked{opacity:.4;pointer-events:none}
   </div>
 </div>
 
+<div class="modal" id="daySummaryModal">
+  <div class="sheet">
+    <h2>今日总战绩</h2>
+    <div class="day-summary-date" id="daySummaryDate"></div>
+    <div id="daySummaryList"></div>
+    <div class="actions">
+      <button class="cancel" id="btnCloseDaySummary">关闭</button>
+      <button class="ok" id="btnNewDayFromSummary">开新一天</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="settingsModal">
   <div class="sheet">
     <h2>设置</h2>
@@ -335,7 +379,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       <div class="field"><label>3位顺位马</label><input type="number" id="setRank3"></div>
       <div class="field"><label>4位顺位马</label><input type="number" id="setRank4"></div>
     </div>
-    <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。比率默认 1；非整数比率时四家结算分可能有 1~2 分舍入误差，线下自行对账。</div>
+    <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。</div>
 
     <div id="playerFields"></div>
 
@@ -350,10 +394,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v5";
-  var OLD_KEY_V4 = "mahjong_scoreboard_v4";
-  var OLD_KEY_V3 = "mahjong_scoreboard_v3";
-  var OLD_KEY_V2 = "mahjong_scoreboard_v2";
+  var STORAGE_KEY = "mahjong_scoreboard_v6";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -387,7 +428,10 @@ form.input.locked{opacity:.4;pointer-events:none}
     gameEnded: false,
     endReason: "",
     history: [],
-    matchSaved: false
+    matchSaved: false,
+    dayEnded: false,
+    daySummary: [],
+    dayEndedAt: ""
   };
 
   var state = load();
@@ -417,23 +461,28 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var oldRaw = localStorage.getItem(OLD_KEY_V4) ||
-                     localStorage.getItem(OLD_KEY_V3) ||
-                     localStorage.getItem(OLD_KEY_V2);
-        if (oldRaw){
-          try {
-            var old = JSON.parse(oldRaw);
-            if (old.settings && old.records){
-              normalizeSettings(old.settings);
-              old.carryover = old.carryover || 0;
-              if (!old.current) old.current = { riichi: [false,false,false,false] };
-              old.gameEnded = false;
-              old.endReason = "";
-              old.history = [];
-              old.matchSaved = false;
-              return old;
-            }
-          } catch(e){}
+        var keys = ["mahjong_scoreboard_v5","mahjong_scoreboard_v4",
+                    "mahjong_scoreboard_v3","mahjong_scoreboard_v2"];
+        for (var k = 0; k < keys.length; k++){
+          var oldRaw = localStorage.getItem(keys[k]);
+          if (oldRaw){
+            try {
+              var old = JSON.parse(oldRaw);
+              if (old.settings && old.records){
+                normalizeSettings(old.settings);
+                old.carryover = old.carryover || 0;
+                if (!old.current) old.current = { riichi: [false,false,false,false] };
+                old.gameEnded = false;
+                old.endReason = "";
+                if (!Array.isArray(old.history)) old.history = [];
+                old.matchSaved = false;
+                old.dayEnded = false;
+                old.daySummary = [];
+                old.dayEndedAt = "";
+                return old;
+              }
+            } catch(e){}
+          }
         }
         return JSON.parse(JSON.stringify(DEFAULT));
       }
@@ -448,6 +497,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (typeof data.endReason !== "string") data.endReason = "";
       if (!Array.isArray(data.history)) data.history = [];
       if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
+      if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
+      if (!Array.isArray(data.daySummary)) data.daySummary = [];
+      if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
       return data;
     } catch(e){
       return JSON.parse(JSON.stringify(DEFAULT));
@@ -484,7 +536,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 5,
+      v: 6,
       settings: state.settings,
       pts: c.pts,
       current: state.current,
@@ -496,7 +548,10 @@ form.input.locked{opacity:.4;pointer-events:none}
       settle: c.settle,
       onTable: c.onTable,
       gameEnded: state.gameEnded,
-      endReason: state.endReason
+      endReason: state.endReason,
+      dayEnded: state.dayEnded,
+      daySummary: state.daySummary || [],
+      dayEndedAt: state.dayEndedAt || ""
     };
     fetch(NTFY_BASE + encodeURIComponent(ROOM), {
       method: "POST",
@@ -732,10 +787,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       return { changes: changes, notes: notes };
     }
 
-    var validWinners = selectedWinners.filter(function(w){
-      return w.han > 0;
-    });
-
+    var validWinners = selectedWinners.filter(function(w){ return w.han > 0; });
     if (validWinners.length === 0){
       for (var i = 0; i < 4; i++){
         if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE;
@@ -772,9 +824,7 @@ form.input.locked{opacity:.4;pointer-events:none}
         headWinnerIdx = validWinners[0].idx;
       }
     } else {
-      if (validWinners.length > 1){
-        validWinners = [validWinners[0]];
-      }
+      if (validWinners.length > 1) validWinners = [validWinners[0]];
       var w = validWinners[0];
       var isDealerWin = w.idx === c.dealerIdx;
       var p = computePoints(w.han, isDealerWin, true);
@@ -865,6 +915,13 @@ form.input.locked{opacity:.4;pointer-events:none}
       banner.classList.remove("show");
     }
 
+    var dayBanner = document.getElementById("dayBanner");
+    if (state.dayEnded){
+      dayBanner.classList.add("show");
+    } else {
+      dayBanner.classList.remove("show");
+    }
+
     var playersEl = document.getElementById("players");
     playersEl.innerHTML = "";
     s.players.forEach(function(p, i){
@@ -906,8 +963,17 @@ form.input.locked{opacity:.4;pointer-events:none}
     syncRenchanFromWinner();
 
     var formEl = document.getElementById("form");
-    if (state.gameEnded) formEl.classList.add("locked");
+    if (state.gameEnded || state.dayEnded) formEl.classList.add("locked");
     else formEl.classList.remove("locked");
+
+    var endBtn = document.getElementById("btnEndDay");
+    if (state.dayEnded){
+      endBtn.textContent = "开新一天";
+      endBtn.classList.add("new-day");
+    } else {
+      endBtn.textContent = "完场";
+      endBtn.classList.remove("new-day");
+    }
 
     var recEl = document.getElementById("records");
     recEl.innerHTML = "";
@@ -1041,7 +1107,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     };
     if (!state.history) state.history = [];
     state.history.unshift(match);
-    if (state.history.length > 30) state.history = state.history.slice(0, 30);
+    if (state.history.length > 50) state.history = state.history.slice(0, 50);
     state.matchSaved = true;
   }
 
@@ -1076,6 +1142,91 @@ form.input.locked{opacity:.4;pointer-events:none}
     render();
   }
 
+  function computeDaySummary(){
+    var s = state.settings;
+    var summary = s.players.map(function(p, i){
+      return {
+        name: p.name,
+        avatar: p.avatar || "",
+        totalSettle: 0,
+        totalPts: 0,
+        matches: 0,
+        ranks: [0,0,0,0]
+      };
+    });
+    state.history.forEach(function(match){
+      (match.players || []).forEach(function(mp, mi){
+        if (mi >= 4) return;
+        summary[mi].totalSettle += (Number(mp.settle) || 0);
+        summary[mi].totalPts += (Number(mp.pts) || 0);
+        summary[mi].matches += 1;
+        if (mp.rank >= 1 && mp.rank <= 4) summary[mi].ranks[mp.rank - 1]++;
+      });
+    });
+    var indexed = summary.map(function(x, i){ return { x: x, i: i }; });
+    indexed.sort(function(a, b){
+      if (b.x.totalSettle !== a.x.totalSettle) return b.x.totalSettle - a.x.totalSettle;
+      return a.i - b.i;
+    });
+    return indexed.map(function(o, rank){
+      o.x.rank = rank + 1;
+      return o.x;
+    });
+  }
+
+  function endDay(){
+    if (state.dayEnded){
+      startNewDay();
+      return;
+    }
+    if (state.records.length > 0 && !state.gameEnded){
+      if (!confirm("当前对局尚未结束，是否将其作为一场比赛结算并完场？")) return;
+      state.gameEnded = true;
+      state.endReason = state.endReason || "手动完场";
+      saveMatchToHistory();
+    } else if (state.records.length > 0 && state.gameEnded && !state.matchSaved){
+      saveMatchToHistory();
+    }
+    if (state.history.length === 0){
+      alert("还没有任何已完成的比赛，无法完场。");
+      return;
+    }
+    if (!confirm("确认完场？将汇总今日全部 " + state.history.length + " 场比赛。")) return;
+    state.daySummary = computeDaySummary();
+    state.dayEnded = true;
+    state.dayEndedAt = new Date().toISOString();
+    save();
+    render();
+    schedulePublish();
+    openDaySummary();
+  }
+
+  function startNewDay(){
+    if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先点“导出”备份数据。")) return;
+    state.records = [];
+    state.carryover = 0;
+    state.current = { riichi: [false, false, false, false] };
+    state.gameEnded = false;
+    state.endReason = "";
+    state.matchSaved = false;
+    state.history = [];
+    state.dayEnded = false;
+    state.daySummary = [];
+    state.dayEndedAt = "";
+    selectedWinners = [];
+    selectedLoser = -1;
+    tenpai = [false, false, false, false];
+    renchanAuto = false;
+    lastFocusedWinnerIdx = -1;
+    document.getElementById("note").value = "";
+    document.getElementById("renchanChk").checked = false;
+    document.getElementById("renchanLabel").classList.remove("auto");
+    document.getElementById("renchanAutoTag").style.display = "none";
+    document.getElementById("daySummaryModal").classList.remove("open");
+    save();
+    render();
+  }
+
   function formatMatchTime(iso){
     try {
       var d = new Date(iso);
@@ -1086,6 +1237,42 @@ form.input.locked{opacity:.4;pointer-events:none}
       var mm = String(d.getMinutes()).padStart(2,"0");
       return y + "-" + m + "-" + dd + " " + hh + ":" + mm;
     } catch(e){ return iso; }
+  }
+
+  function openDaySummary(){
+    var modal = document.getElementById("daySummaryModal");
+    var list = document.getElementById("daySummaryList");
+    var dateEl = document.getElementById("daySummaryDate");
+    list.innerHTML = "";
+    if (state.dayEndedAt){
+      dateEl.textContent = "完场时间：" + formatMatchTime(state.dayEndedAt) +
+        " · 共 " + state.history.length + " 场";
+    } else {
+      dateEl.textContent = "";
+    }
+    if (!state.daySummary || state.daySummary.length === 0){
+      list.innerHTML = '<div class="history-empty">暂无数据</div>';
+    } else {
+      state.daySummary.forEach(function(sm){
+        var div = document.createElement("div");
+        div.className = "ds-row" + (sm.rank === 1 ? " rank1" : "");
+        var settleCls = sm.totalSettle > 0 ? "pos" : (sm.totalSettle < 0 ? "neg" : "");
+        var sign = sm.totalSettle > 0 ? "+" : "";
+        var stats = sm.matches + "场";
+        if (sm.matches > 0){
+          stats += " · " + sm.ranks[0] + "/" + sm.ranks[1] + "/" + sm.ranks[2] + "/" + sm.ranks[3];
+        }
+        div.innerHTML =
+          '<div class="ds-rank">' + sm.rank + '</div>' +
+          '<div class="ds-info">' +
+            '<div class="ds-name">' + escapeHtml(sm.name) + '</div>' +
+            '<div class="ds-stats">' + escapeHtml(stats) + '</div>' +
+          '</div>' +
+          '<div class="ds-total ' + settleCls + '">' + sign + sm.totalSettle + '</div>';
+        list.appendChild(div);
+      });
+    }
+    modal.classList.add("open");
   }
 
   function openHistory(){
@@ -1251,15 +1438,11 @@ form.input.locked{opacity:.4;pointer-events:none}
     var existing = selectedWinners.findIndex(function(w){ return w.idx === idx; });
 
     if (currentMode === "tsumo"){
-      if (existing >= 0){
-        selectedWinners = [];
-      } else {
-        selectedWinners = [{ idx: idx, han: 0 }];
-      }
+      if (existing >= 0) selectedWinners = [];
+      else selectedWinners = [{ idx: idx, han: 0 }];
     } else {
-      if (existing >= 0){
-        selectedWinners.splice(existing, 1);
-      } else {
+      if (existing >= 0) selectedWinners.splice(existing, 1);
+      else {
         if (idx === selectedLoser) selectedLoser = -1;
         selectedWinners.push({ idx: idx, han: 0 });
       }
@@ -1353,6 +1536,10 @@ form.input.locked{opacity:.4;pointer-events:none}
 
   document.getElementById("form").addEventListener("submit", function(e){
     e.preventDefault();
+    if (state.dayEnded){
+      alert("今日已完场，请点“开新一天”后再继续");
+      return;
+    }
     if (state.gameEnded){
       alert("比赛已结束，请点“开新一场”或撤销后再继续");
       return;
@@ -1454,6 +1641,10 @@ form.input.locked{opacity:.4;pointer-events:none}
   });
 
   document.getElementById("btnUndo").addEventListener("click", function(){
+    if (state.dayEnded){
+      alert("今日已完场，请先点“开新一天”");
+      return;
+    }
     if (state.records.length === 0) return;
     var wasSaved = state.matchSaved && state.history && state.history.length > 0;
     var msg = wasSaved ? "撤销最后一局？已保存的战绩也会被移除。" : "撤销最后一局？";
@@ -1470,11 +1661,17 @@ form.input.locked{opacity:.4;pointer-events:none}
     save(); render();
   });
 
+  document.getElementById("btnEndDay").addEventListener("click", endDay);
   document.getElementById("btnHistory").addEventListener("click", openHistory);
   document.getElementById("btnCloseHistory").addEventListener("click", function(){
     document.getElementById("historyModal").classList.remove("open");
   });
   document.getElementById("btnStartNewMatch").addEventListener("click", startNewMatch);
+  document.getElementById("btnShowDaySummary").addEventListener("click", openDaySummary);
+  document.getElementById("btnCloseDaySummary").addEventListener("click", function(){
+    document.getElementById("daySummaryModal").classList.remove("open");
+  });
+  document.getElementById("btnNewDayFromSummary").addEventListener("click", startNewDay);
 
   document.getElementById("btnExport").addEventListener("click", function(){
     var data = JSON.stringify(state, null, 2);
@@ -1507,6 +1704,9 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (typeof data.endReason !== "string") data.endReason = "";
           if (!Array.isArray(data.history)) data.history = [];
           if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
+          if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
+          if (!Array.isArray(data.daySummary)) data.daySummary = [];
+          if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
           state = data;
           recheckGameEnd();
           maybeSaveMatch();

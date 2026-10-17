@@ -326,4 +326,27 @@ header{display:flex;justify-content:center;align-items:center;
     }
   }
 
-  var es = new EventSource(NTFY + "/sse
+  var es = new EventSource(NTFY + "/sse");
+  es.onopen = function(){
+    statusEl.textContent = "已连接，等待手机端数据…";
+    statusEl.className = "status";
+  };
+  es.onerror = function(){
+    statusEl.textContent = "连接中断，自动重连中…";
+    statusEl.className = "status err";
+  };
+  es.onmessage = function(e){
+    try {
+      var msg = JSON.parse(e.data);
+      if (msg.event !== "message" || !msg.message) return;
+      var data = JSON.parse(msg.message);
+      if (!data.settings || !data.pts || !data.current) return;
+      render(data);
+      statusEl.textContent = "● 已同步";
+      statusEl.className = "status ok";
+    } catch(err){}
+  };
+})();
+</script>
+</body>
+</html>

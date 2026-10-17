@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>日麻记分牌 · 展示</title>
+<style>
+:root{
+  --bg:#0b1120; --card:#1e293b; --line:#334155; --text:#e2e8f0;
+  --muted:#94a3b8; --accent:#f59e0b; --green:#22c55e; --red:#ef4444;
+  --riichi:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  overflow:hidden}
+.wrap{height:100%;display:flex;flex-direction:column;padding:3vh 3vw;gap:2vh}
+header{display:flex;justify-content:center;gap:2vw;flex-wrap:wrap}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:1.2vh 2vw;font-size:2.2vw;white-space:nowrap}
+.chip b{color:var(--accent);margin-left:.6vw}
+.chip.dealer b{color:#fb923c}
+.chip.riichi b{color:var(--riichi)}
+.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  gap:2vh 2vw;min-height:0}
+.player{background:var(--card);border:2px solid var(--line);border-radius:20px;
+  padding:2vh 2vw;display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;transition:all .2s}
+.player.dealer{background:#3b2f1a;border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(245,158,11,.25),0 0 40px rgba(245,158,11,.15)}
+.player.riichi{background:#2a0a0a;border-color:var(--riichi);
+  box-shadow:0 0 0 4px rgba(239,68,68,.25),0 0 40px rgba(239,68,68,.15)}
+.player.dealer.riichi{background:linear-gradient(135deg,#3b2f1a,#2a0a0a);
+  border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(245,158,11,.25),0 0 0 8px rgba(239,68,68,.15)}
+.player .name{font-size:3vw;font-weight:800;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player.dealer .name{color:var(--accent)}
+.player.riichi .name{color:#fca5a5}
+.player .pts{font-size:9vw;font-weight:900;line-height:1;margin:.6vh 0;
+  font-variant-numeric:tabular-nums}
+.player .pts.neg{color:var(--red)}
+.player .row{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:2.2vw}
+.player .rank{font-weight:800}
+.player .rank.r1{color:#fbbf24}
+.player .rank.r4{color:var(--muted)}
+.player .settle{color:var(--muted);font-variant-numeric:tabular-nums}
+.player .settle.pos{color:var(--green)}
+.player .settle.neg{color:var(--red)}
+.badge{position:absolute;top:1.4vh;font-size:1.6vw;font-weight:800;
+  padding:.4vh 1vw;border-radius:10px}
+.badge.dealer{right:1.6vw;background:var(--accent);color:#111}
+.badge.riichi{left:1.6vw;background:var(--riichi);color:#fff}
+.status{position:fixed;left:0;right:0;bottom:1vh;text-align:center;
+  font-size:1.4vw;color:var(--muted)}
+.status.err{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="chip">当前局 <b id="roundName">东1局</b></div>
+    <div class="chip">连庄 <b id="renchan">0</b></div>
+    <div class="chip riichi">立直棒 <b id="onTable">0</b></div>
+    <div class="chip dealer">庄家 <b id="dealerName">-</b></div>
+    <div class="chip">总计 <b id="total">400</b></div>
+  </header>
+  <div class="grid" id="grid"></div>
+</div>
+<div class="status" id="status">等待手机端数据…</div>
+
+<script>
+(function(){
+  "use strict";
+  var params = new URLSearchParams(location.search);
+  var ROOM = params.get("room");
+  var statusEl = document.getElementById("status");
+  var RIICHI_VALUE = 4;
+
+  if (!ROOM){
+    statusEl.textContent = "缺少 room 参数，请用 display.html?room=房间号 打开";
+    statusEl.className = "status err";
+    return;
+  }
+
+  var NTFY = "https://ntfy.sh/" + encodeURIComponent(ROOM);
+
+  function roundName(n){
+    if (n > 16) return "延长" + (n - 16) + "局";
+    var winds = ["东","南","西","北"];
+    return winds[Math.floor((n - 1) / 4)] + (((n - 1) % 4) + 1) + "局";
+  }
+
+  function compute(s){
+    var current = s.current || { riichi: [false,false,false,false] };
+    var carryover = s.carryover || 0;
+    var pts = s.settings.players.map(function(){ return s.settings.startPoints; });
+    s.records.forEach(function(r){
+      for (var i = 0; i < 4; i++) pts[i] += (Number(r.changes[i]) || 0);
+    });
+    for (var i = 0; i < 4; i++){
+      if (current.riichi[i]) pts[i] -= RIICHI_VALUE;
+    }
+    var nonRenchan = 0;
+    s.records.forEach(function(r){ if (r.renchan !== true) nonRenchan++; });
+    var currentRound = nonRenchan + 1;
+    var renchan = 0;
+    for (var i = s.records.length - 1; i >= 0; i--){
+      if (s.records[i].renchan === true) renchan++;
+      else break;
+    }
+    var dealerPriority = ((currentRound - 1) % 4) + 1;
+    var order = s.settings.players.map(function(p, i){
+      return { i: i, pts: pts[i], prio: p.priority };
+    });
+    order.sort(function(a, b){
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      return a.prio - b.prio;
+    });
+    var ranks = [0,0,0,0];
+    order.forEach(function(o, idx){ ranks[o.i] = idx + 1; });
+    var settle = pts.map(function(p, i){
+      return (p - s.settings.returnPoints) + s.settings.uma[ranks[i] - 1];
+    });
+    var riichiCount = current.riichi.filter(Boolean).length;
+    var onTable = carryover + riichiCount;
+    return { pts: pts, currentRound: currentRound, renchan: renchan,
+             dealerPriority: dealerPriority, ranks: ranks, settle: settle,
+             onTable: onTable, riichi: current.riichi };
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function render(s){
+    var c = compute(s);
+    var ps = s.settings.players;
+
+    document.getElementById("roundName").textContent = roundName(c.currentRound);
+    document.getElementById("renchan").textContent = c.renchan;
+    document.getElementById("onTable").textContent = c.onTable;
+
+    var totalCheck = c.pts.reduce(function(a,b){ return a+b; }, 0) + c.onTable * RIICHI_VALUE;
+    var totalEl = document.getElementById("total");
+    totalEl.textContent = totalCheck;
+    totalEl.style.color = totalCheck === s.settings.startPoints * 4 ? "" : "#ef4444";
+
+    var dealerIdx = -1;
+    ps.forEach(function(p, i){ if (p.priority === c.dealerPriority) dealerIdx = i; });
+    document.getElementById("dealerName").textContent =
+      dealerIdx >= 0 ? ps[dealerIdx].name : "-";
+
+    var grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    ps.forEach(function(p, i){
+      var d = document.createElement("div");
+      var cls = "player";
+      if (i === dealerIdx) cls += " dealer";
+      if (c.riichi[i]) cls += " riichi";
+      d.className = cls;
+
+      var rankClass = c.ranks[i] === 1 ? "r1" : (c.ranks[i] === 4 ? "r4" : "");
+      var settleClass = c.settle[i] > 0 ? "pos" : (c.settle[i] < 0 ? "neg" : "");
+      var settleStr = (c.settle[i] > 0 ? "+" : "") + c.settle[i];
+      var ptsClass = c.pts[i] < 0 ? "pts neg" : "pts";
+
+      d.innerHTML =
+        (i === dealerIdx ? '<div class="badge dealer">庄</div>' : '') +
+        (c.riichi[i] ? '<div class="badge riichi">立直</div>' : '') +
+        '<div class="name">' + escapeHtml(p.name) + '</div>' +
+        '<div class="' + ptsClass + '">' + c.pts[i] + '</div>' +
+        '<div class="row">' +
+          '<span class="rank ' + rankClass + '">' + c.ranks[i] + '位</span>' +
+          '<span class="settle ' + settleClass + '">' + settleStr + '</span>' +
+        '</div>';
+      grid.appendChild(d);
+    });
+  }
+
+  var es = new EventSource(NTFY + "/sse");
+  es.onopen = function(){
+    statusEl.textContent = "已连接，等待手机端数据…";
+    statusEl.className = "status";
+  };
+  es.onerror = function(){
+    statusEl.textContent = "连接中断，自动重连中…";
+    statusEl.className = "status err";
+  };
+  es.onmessage = function(e){
+    try {
+      var msg = JSON.parse(e.data);
+      if (msg.event !== "message" || !msg.message) return;
+      var state = JSON.parse(msg.message);
+      if (!state.settings || !state.records) return;
+      render(state);
+      statusEl.textContent = "已同步";
+      statusEl.className = "status";
+    } catch(err){}
+  };
+})();
+</script>
+</body>
+</html>

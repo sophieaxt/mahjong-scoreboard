@@ -34,6 +34,12 @@ header{display:flex;justify-content:center;align-items:center;
 .chip.riichi-chip b{color:var(--red)}
 .chip .bonus{font-size:1.5vh;color:var(--accent);margin-left:.3vw;font-weight:700}
 
+.end-banner{display:none;text-align:center;font-size:2.4vh;font-weight:800;
+  padding:1.2vh 2vw;border-radius:1.2vh;
+  background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;
+  border:1px solid #dc2626;box-shadow:0 0 2vh rgba(239,68,68,.4)}
+.end-banner.show{display:block}
+
 .grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
   gap:1.5vh 1.5vw;min-height:0}
 .player{position:relative;
@@ -50,12 +56,26 @@ header{display:flex;justify-content:center;align-items:center;
 .player.dealer.riichi{background:linear-gradient(135deg,rgba(58,26,24,.95),rgba(40,18,16,.95));
   border-color:rgba(245,158,11,.8);
   box-shadow:0 0 2vh rgba(245,158,11,.25),0 0 2vh rgba(239,68,68,.15)}
-.player .top-row{display:flex;justify-content:space-between;align-items:center;gap:1vw}
+
+.player .top-row{display:flex;align-items:center;gap:1.5vw}
+.player .avatar{
+  width:8vh;height:8vh;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:4.5vh;font-weight:800;overflow:hidden;
+  color:#fff;border:2px solid rgba(255,255,255,.15);
+  box-shadow:0 2px 10px rgba(0,0,0,.4);
+}
+.player .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.player.dealer .avatar{border-color:rgba(245,158,11,.85);
+  box-shadow:0 0 1.5vh rgba(245,158,11,.5)}
+.player.riichi .avatar{border-color:rgba(239,68,68,.85);
+  box-shadow:0 0 1.5vh rgba(239,68,68,.5)}
+
 .player .name{font-size:3vh;font-weight:700;color:var(--muted);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .player.dealer .name{color:var(--accent)}
 .player.riichi .name{color:#fca5a5}
-.player .pts{font-size:11vh;font-weight:900;line-height:1;letter-spacing:-.2vw;
+.player .pts{font-size:10vh;font-weight:900;line-height:1;letter-spacing:-.2vw;
   font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
 .player .pts.neg{color:var(--red)}
 .player .bottom-row{display:flex;justify-content:space-between;
@@ -84,6 +104,7 @@ header{display:flex;justify-content:center;align-items:center;
     <div class="chip dealer">庄家<b id="dealerName">-</b></div>
     <div class="chip">总计<b id="total">400</b></div>
   </header>
+  <div class="end-banner" id="endBanner"></div>
   <div class="grid" id="grid"></div>
   <div class="status" id="status">等待手机端数据…</div>
 </div>
@@ -95,6 +116,7 @@ header{display:flex;justify-content:center;align-items:center;
   var ROOM = params.get("room");
   var statusEl = document.getElementById("status");
   var RIICHI_VALUE = 4;
+  var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
 
   if (!ROOM){
     statusEl.textContent = "缺少 room 参数，请用 display.html?room=房间号 打开";
@@ -105,15 +127,30 @@ header{display:flex;justify-content:center;align-items:center;
   var NTFY = "https://ntfy.sh/" + encodeURIComponent(ROOM);
 
   function roundName(n){
-    if (n > 16) return "延长" + (n - 16) + "局";
-    var winds = ["东","南","西","北"];
-    return winds[Math.floor((n - 1) / 4)] + (((n - 1) % 4) + 1) + "局";
+    if (n <= 0) return "东1局";
+    if (n <= 16){
+      var winds = ["东","南","西","北"];
+      return winds[Math.floor((n - 1) / 4)] + (((n - 1) % 4) + 1) + "局";
+    }
+    return "延长" + (n - 16) + "局";
   }
 
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, function(c){
       return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
     });
+  }
+
+  function avatarInner(p){
+    var a = (p.avatar || "").trim();
+    if (/^https?:\/\//i.test(a)){
+      return '<img src="' + escapeHtml(a) + '" alt="" onerror="this.style.display=\'none\'">';
+    }
+    if (a){
+      return escapeHtml(a);
+    }
+    var ch = (p.name || "?").trim().charAt(0) || "?";
+    return escapeHtml(ch);
   }
 
   function render(d){
@@ -134,6 +171,14 @@ header{display:flex;justify-content:center;align-items:center;
     document.getElementById("dealerName").textContent =
       d.dealerIdx >= 0 ? ps[d.dealerIdx].name : "-";
 
+    var banner = document.getElementById("endBanner");
+    if (d.gameEnded){
+      banner.textContent = "🏁 比赛结束：" + (d.endReason || "");
+      banner.classList.add("show");
+    } else {
+      banner.classList.remove("show");
+    }
+
     var grid = document.getElementById("grid");
     grid.innerHTML = "";
     ps.forEach(function(p, i){
@@ -152,9 +197,14 @@ header{display:flex;justify-content:center;align-items:center;
       if (i === d.dealerIdx) badges += '<div class="badge dealer-badge">庄</div>';
       if (current.riichi[i]) badges += '<div class="badge riichi-badge">立直</div>';
 
+      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
+
       card.innerHTML =
         badges +
-        '<div class="top-row"><span class="name">' + escapeHtml(p.name) + '</span></div>' +
+        '<div class="top-row">' +
+          '<div class="avatar" style="background:' + avBg + '">' + avatarInner(p) + '</div>' +
+          '<span class="name">' + escapeHtml(p.name) + '</span>' +
+        '</div>' +
         '<div class="' + ptsClass + '">' + d.pts[i] + '</div>' +
         '<div class="bottom-row">' +
           '<span class="rank ' + rankClass + '">' + d.ranks[i] + '位</span>' +

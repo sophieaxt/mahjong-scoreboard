@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>日麻记分牌</title>
+<style>
+:root{
+  --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#e2e8f0;
+  --muted:#94a3b8; --accent:#f59e0b; --green:#22c55e; --red:#ef4444;
+  --riichi:#ef4444;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  padding-bottom:420px}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+
+header{position:sticky;top:0;z-index:10;background:var(--bg);
+  padding:10px 12px 8px;border-bottom:1px solid var(--line)}
+.title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.title{font-size:17px;font-weight:700}
+.sync{font-size:12px;padding:4px 8px;border-radius:8px;cursor:pointer;
+  background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.sync.ok{color:var(--green);border-color:#14532d;background:#052e16}
+.sync.err{color:var(--red);border-color:#7f1d1d;background:#2a0a0a}
+.sync.pending{color:var(--accent)}
+.info{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:9px;
+  padding:5px 9px;font-size:13px;white-space:nowrap}
+.chip b{color:var(--accent)}
+.chip.dealer b{color:#fb923c}
+.chip.riichi b{color:var(--riichi)}
+.chip .bonus{color:var(--accent);font-size:11px;margin-left:2px;font-weight:700}
+
+.players{padding:12px;display:flex;flex-direction:column;gap:8px}
+.player{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:10px 12px;transition:all .2s;display:flex;flex-direction:column;gap:6px}
+.player.dealer{border:2px solid var(--accent);background:#3b2f1a;
+  box-shadow:0 0 0 2px rgba(245,158,11,.2)}
+.player.riichi{border:2px solid var(--riichi);background:#2a0a0a;
+  box-shadow:0 0 0 2px rgba(239,68,68,.2)}
+.player.dealer.riichi{border:2px solid var(--accent);
+  background:linear-gradient(135deg,#3b2f1a,#2a0a0a);
+  box-shadow:0 0 0 2px rgba(245,158,11,.2),0 0 0 4px rgba(239,68,68,.15)}
+.player-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.player .name{font-weight:700;font-size:15px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;flex:1}
+.player.dealer .name{color:var(--accent)}
+.player.riichi .name{color:#fca5a5}
+.riichi-btn{padding:4px 10px;font-size:12px;border-radius:8px;flex-shrink:0;
+  background:var(--card);border:1px solid var(--line);color:var(--muted);
+  font-weight:700;transition:all .15s}
+.riichi-btn.on{background:var(--riichi);border-color:var(--riichi);color:#fff}
+.player-bottom{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.player .pts{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.player .pts.neg{color:var(--red)}
+.player .rank{font-size:18px;font-weight:800}
+.player .rank.r1{color:#fbbf24}
+.player .rank.r4{color:var(--muted)}
+.player .settle{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.player .settle.pos{color:var(--green)}
+.player .settle.neg{color:var(--red)}
+
+.history{padding:0 12px 12px}
+.history h3{font-size:13px;color:var(--muted);margin:16px 0 8px}
+.rec{display:flex;justify-content:space-between;align-items:flex-start;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:8px 10px;margin-bottom:6px;font-size:13px}
+.rec .meta{flex:1;min-width:0}
+.rec .round{font-weight:700;color:var(--accent)}
+.rec .chg{color:var(--muted);margin-top:3px;word-break:break-all}
+.rec .tag{display:inline-block;padding:1px 6px;border-radius:6px;
+  font-size:11px;margin-left:4px;background:#334155;color:#cbd5e1}
+.rec .tag.renchan{background:#14532d;color:#86efac}
+.rec .tag.riichi{background:#7f1d1d;color:#fca5a5}
+.rec .tag.win{background:#14532d;color:#86efac}
+.rec .tag.draw{background:#334155;color:#cbd5e1}
+.rec .tag.tsumo{background:#1e3a8a;color:#93c5fd}
+.rec .tag.han{background:#78350f;color:#fcd34d}
+.rec button{background:transparent;border:1px solid var(--line);color:var(--muted);
+  border-radius:8px;padding:4px 8px;font-size:12px;flex-shrink:0;margin-left:8px}
+
+.toolbar{display:flex;gap:8px;padding:0 12px 12px;flex-wrap:wrap}
+.toolbar button{flex:1;min-width:70px;padding:10px;background:var(--card);
+  border:1px solid var(--line);color:var(--text);border-radius:10px;font-size:13px}
+
+form.input{position:fixed;left:0;right:0;bottom:0;z-index:20;
+  background:#111827;border-top:1px solid var(--line);
+  padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+
+.mode-tabs{display:flex;gap:4px;margin-bottom:8px}
+.mode-tabs button{flex:1;padding:9px;font-size:14px;font-weight:700;
+  background:var(--card);border:1px solid var(--line);color:var(--muted);
+  border-radius:9px;transition:all .15s}
+.mode-tabs button.active{background:var(--accent);border-color:var(--accent);color:#111}
+
+.btn-line{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.btn-label{font-size:12px;color:var(--muted);flex-shrink:0;width:32px}
+.btn-group{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+.btn-group button{flex:1;min-width:0;padding:7px 4px;font-size:12px;
+  background:var(--card);border:1px solid var(--line);color:var(--muted);
+  border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-group button.active{background:var(--accent);border-color:var(--accent);
+  color:#111;font-weight:700}
+.btn-group button:disabled{opacity:.35}
+
+.han-line{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.han-line input{flex:1;padding:9px;font-size:18px;text-align:center;
+  background:var(--card);border:1px solid var(--line);color:var(--text);
+  border-radius:9px;font-weight:700;min-width:0}
+.tier-hint{font-size:12px;color:var(--accent);font-weight:700;
+  flex-shrink:0;min-width:52px;text-align:center}
+
+.han-quick{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-bottom:6px}
+.han-quick button{padding:6px 2px;font-size:11px;
+  background:var(--card);border:1px solid var(--line);color:var(--muted);
+  border-radius:7px;white-space:nowrap;overflow:hidden}
+.han-quick button.active{background:#78350f;border-color:#78350f;color:#fcd34d;font-weight:700}
+
+.draw-line{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.draw-hint{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:4px}
+
+.preview{padding:6px 8px;background:rgba(0,0,0,.25);border-radius:8px;
+  font-size:12px;line-height:1.5;margin-bottom:6px;min-height:22px;
+  color:var(--muted);word-break:break-all}
+.preview .pv-row{display:flex;justify-content:space-between;padding:1px 0}
+.preview .pv-row b{font-weight:700}
+.preview .pv-pos{color:var(--green)}
+.preview .pv-neg{color:var(--red)}
+.preview .pv-tag{font-size:10px;color:var(--muted);margin-left:4px}
+.preview .pv-note{color:var(--accent);font-size:11px}
+
+.row2{display:flex;gap:6px;align-items:center;margin-top:4px}
+.row2 .renchan{display:flex;align-items:center;gap:5px;font-size:13px;
+  background:var(--card);border:1px solid var(--line);border-radius:9px;
+  padding:9px 10px;white-space:nowrap}
+.row2 .renchan input{width:17px;height:17px;margin:0}
+.row2 input.note{flex:1;padding:9px 10px;font-size:13px;background:var(--card);
+  border:1px solid var(--line);color:var(--text);border-radius:9px;min-width:0}
+.row2 button.submit{flex:0 0 auto;padding:9px 16px;font-size:15px;font-weight:700;
+  background:var(--accent);color:#111;border:none;border-radius:9px}
+
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);
+  display:none;align-items:flex-end}
+.modal.open{display:flex}
+.modal .sheet{width:100%;max-height:88vh;overflow-y:auto;background:var(--bg);
+  border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.modal h2{margin:0 0 12px;font-size:18px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.field input{width:100%;padding:10px;font-size:16px;background:var(--card);
+  border:1px solid var(--line);color:var(--text);border-radius:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal .actions{display:flex;gap:8px;margin-top:14px}
+.modal .actions button{flex:1;padding:12px;font-size:15px;font-weight:700;
+  border:none;border-radius:10px}
+.modal .actions .ok{background:var(--accent);color:#111}
+.modal .actions .cancel{background:var(--card);color:var(--text);
+  border:1px solid var(--line)}
+.hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <div class="title">日麻记分牌</div>
+    <div class="sync idle" id="syncStatus">● 未同步</div>
+  </div>
+  <div class="info">
+    <div class="chip">当前局 <b id="roundName">东1局</b></div>
+    <div class="chip">连庄 <b id="renchan">0</b><span class="bonus" id="renchanBonus"></span></div>
+    <div class="chip riichi">立直棒 <b id="onTable">0</b></div>
+    <div class="chip dealer">庄家 <b id="dealerName">-</b></div>
+    <div class="chip">总计 <b id="total">400</b></div>
+  </div>
+</header>
+
+<div class="players" id="players"></div>
+
+<div class="history">
+  <h3>对局记录</h3>
+  <div id="records"></div>
+  <div class="toolbar">
+    <button id="btnSettings">设置</button>
+    <button id="btnExport">导出</button>
+    <button id="btnImport">导入</button>
+    <button id="btnUndo">撤销</button>
+  </div>
+</div>
+
+<form class="input" id="form">
+  <div class="mode-tabs" id="modeTabs">
+    <button type="button" data-mode="ron" class="active">点炮</button>
+    <button type="button" data-mode="tsumo">自摸</button>
+    <button type="button" data-mode="draw">流局</button>
+  </div>
+
+  <div id="winArea">
+    <div class="btn-line">
+      <span class="btn-label">赢家</span>
+      <div class="btn-group" id="winnerBtns"></div>
+    </div>
+    <div class="btn-line" id="loserLine">
+      <span class="btn-label">放铳</span>
+      <div class="btn-group" id="loserBtns"></div>
+    </div>
+    <div class="han-line">
+      <span class="btn-label">翻数</span>
+      <input type="number" id="hanInput" placeholder="0" min="1" max="99" inputmode="numeric">
+      <span class="tier-hint" id="tierHint">—</span>
+    </div>
+    <div class="han-quick" id="hanQuick">
+      <button type="button" data-han="1">1翻</button>
+      <button type="button" data-han="2">2翻</button>
+      <button type="button" data-han="3">3翻</button>
+      <button type="button" data-han="4">满贯</button>
+      <button type="button" data-han="6">跳满</button>
+      <button type="button" data-han="8">倍满</button>
+      <button type="button" data-han="11">三倍满</button>
+      <button type="button" data-han="13">役满</button>
+    </div>
+  </div>
+
+  <div id="drawArea" style="display:none">
+    <div class="draw-line">
+      <span class="btn-label">听牌</span>
+      <div class="btn-group" id="tenpaiBtns"></div>
+    </div>
+    <div class="draw-hint">流局满贯成立时，请改用“自摸”模式、翻数填 4 录入，优先于不听罚则。</div>
+  </div>
+
+  <div class="preview" id="preview"></div>
+
+  <div class="row2">
+    <label class="renchan"><input type="checkbox" id="renchanChk">连庄</label>
+    <input class="note" id="note" placeholder="备注">
+    <button class="submit" type="submit">记录</button>
+  </div>
+</form>
+
+<div class="modal" id="settingsModal">
+  <div class="sheet">
+    <h2>设置</h2>
+
+    <div class="field">
+      <label>同步房间号（电视端用 display.html?room=房间号 打开）</label>
+      <input type="text" id="setRoom" placeholder="留空则不同步">
+      <div class="hint">建议用一串随机字符，如 mj-a7f3k9x2。</div>
+    </div>
+
+    <div class="grid2">
+      <div class="field"><label>起始点数</label><input type="number" id="setStart"></div>
+      <div class="field"><label>头名奖（每人出）</label><input type="number" id="setHeadPrize"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>1位名次奖</label><input type="number" id="setRank1"></div>
+      <div class="field"><label>2位名次奖</label><input type="number" id="setRank2"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>3位名次奖</label><input type="number" id="setRank3"></div>
+      <div class="field"><label>4位名次奖</label><input type="number" id="setRank4"></div>
+    </div>
+
+    <div id="playerFields"></div>
+
+    <div class="actions">
+      <button class="cancel" id="btnCancelSettings">取消</button>
+      <button class="ok" id="btnSaveSettings">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "mahjong_scoreboard_v3";
+  var OLD_KEY = "mahjong_scoreboard_v2";
+  var ROOM_KEY = "mahjong_room_v1";
+  var NTFY_BASE = "https://ntfy.sh/";
+  var RIICHI_VALUE = 4;
+  var RENCHAN_BONUS = 3;
+
+  // 文档点数表（庄家点炮 3翻 = 24，已修正）
+  var RON_NON_DEALER = [4, 8, 16, 32, 48, 64, 96, 128];
+  var RON_DEALER     = [6, 12, 24, 48, 72, 96, 144, 192];
+  var TSUMO_ND_PAY_ND = [1, 2, 4, 8, 12, 16, 24, 32];
+  var TSUMO_ND_PAY_D  = [2, 4, 8, 16, 24, 32, 48, 64];
+  var TSUMO_D_PAY     = [2, 4, 8, 16, 24, 32, 48, 64];
+  var TIER_NAMES = ["1翻", "2翻", "3翻", "满贯", "跳满", "倍满", "三倍满", "役满"];
+
+  var DEFAULT = {
+    settings: {
+      startPoints: 100,
+      headPrize: 10,
+      rankPrize: [15, 5, -5, -15],
+      players: [
+        { name: "玩家1", priority: 1 },
+        { name: "玩家2", priority: 2 },
+        { name: "玩家3", priority: 3 },
+        { name: "玩家4", priority: 4 }
+      ]
+    },
+    records: [],
+    carryover: 0,
+    current: { riichi: [false, false, false, false] }
+  };
+
+  var state = load();
+  var ROOM = initRoom();
+  var publishTimer = null;
+  var currentMode = "ron";
+  var selectedWinner = -1;
+  var selectedLoser = -1;
+  var tenpai = [false, false, false, false];
+
+  function load(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw){
+        var oldRaw = localStorage.getItem(OLD_KEY);
+        if (oldRaw){
+          try {
+            var old = JSON.parse(oldRaw);
+            if (old.settings && old.records){
+              old.settings.headPrize = 10;
+              old.settings.rankPrize = [15, 5, -5, -15];
+              if (typeof old.settings.startPoints !== "number") old.settings.startPoints = 100;
+              delete old.settings.returnPoints;
+              delete old.settings.uma;
+              old.carryover = old.carryover || 0;
+              if (!old.current) old.current = { riichi: [false,false,false,false] };
+              return old;
+            }
+          } catch(e){}
+        }
+        return JSON.parse(JSON.stringify(DEFAULT));
+      }
+      var data = JSON.parse(raw);
+      if (!data.settings || !data.records) return JSON.parse(JSON.stringify(DEFAULT));
+      if (typeof data.settings.headPrize !== "number") data.settings.headPrize = 10;
+      if (!Array.isArray(data.settings.rankPrize)) data.settings.rankPrize = [15, 5, -5, -15];
+      if (typeof data.settings.startPoints !== "number") data.settings.startPoints = 100;
+      if (typeof data.carryover !== "number") data.carryover = 0;
+      if (!data.current || !Array.isArray(data.current.riichi)){
+        data.current = { riichi: [false,false,false,false] };
+      }
+      return data;
+    } catch(e){
+      return JSON.parse(JSON.stringify(DEFAULT));
+    }
+  }
+
+  function initRoom(){
+    var params = new URLSearchParams(location.search);
+    var urlRoom = params.get("room");
+    var savedRoom = localStorage.getItem(ROOM_KEY) || "";
+    if (urlRoom){
+      localStorage.setItem(ROOM_KEY, urlRoom);
+      var url = new URL(location.href);
+      url.searchParams.delete("room");
+      history.replaceState(null, "", url.toString());
+      return urlRoom;
+    }
+    return savedRoom;
+  }
+
+  function save(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+    schedulePublish();
+  }
+
+  function schedulePublish(){
+    if (!ROOM){ setSync("idle"); return; }
+    clearTimeout(publishTimer);
+    publishTimer = setTimeout(doPublish, 300);
+  }
+
+  function doPublish(){
+    if (!ROOM) return;
+    setSync("pending");
+    var c = compute();
+    var publishState = {
+      v: 3,
+      settings: state.settings,
+      pts: c.pts,
+      current: state.current,
+      carryover: state.carryover,
+      currentRound: c.currentRound,
+      renchan: c.renchan,
+      dealerIdx: c.dealerIdx,
+      ranks: c.ranks,
+      settle: c.settle,
+      onTable: c.onTable
+    };
+    fetch(NTFY_BASE + encodeURIComponent(ROOM), {
+      method: "POST",
+      body: JSON.stringify(publishState)
+    }).then(function(r){
+      setSync(r.ok ? "ok" : "err");
+    }).catch(function(){
+      setSync("err");
+    });
+  }
+
+  function setSync(s){
+    var el = document.getElementById("syncStatus");
+    if (!ROOM){
+      el.textContent = "● 未同步（点此设置）";
+      el.className = "sync idle";
+    } else if (s === "ok"){
+      el.textContent = "● 已同步";
+      el.className = "sync ok";
+    } else if (s === "err"){
+      el.textContent = "● 同步失败";
+      el.className = "sync err";
+    } else if (s === "pending"){
+      el.textContent = "● 同步中…";
+      el.className = "sync pending";
+    } else {
+      el.textContent = "● 待同步";
+      el.className = "sync idle";
+    }
+  }
+
+  function roundName(n){
+    if (n > 16) return "延长" + (n - 16) + "局";
+    var winds = ["东","南","西","北"];
+    return winds[Math.floor((n - 1) / 4)] + (((n - 1) % 4) + 1) + "局";
+  }
+
+  function getRenchanCount(){
+    var n = 0;
+    for (var i = state.records.length - 1; i >= 0; i--){
+      if (state.records[i].renchan === true) n++;
+      else break;
+    }
+    return n;
+  }
+
+  function hanToTier(han){
+    if (han <= 0) return 0;
+    if (han === 1) return 1;
+    if (han === 2) return 2;
+    if (han === 3) return 3;
+    if (han <= 5) return 4;
+    if (han <= 7) return 5;
+    if (han <= 10) return 6;
+    if (han <= 12) return 7;
+    return 8;
+  }
+
+  function computePoints(han, isDealerWin, isTsumo){
+    var tier = hanToTier(han);
+    if (tier === 0) return null;
+    var idx = tier - 1;
+    if (!isTsumo){
+      return { total: isDealerWin ? RON_DEALER[idx] : RON_NON_DEALER[idx], mode: "ron" };
+    }
+    if (isDealerWin){
+      var p = TSUMO_D_PAY[idx];
+      return { total: p * 3, each: p, mode: "tsumo-dealer" };
+    }
+    return {
+      total: TSUMO_ND_PAY_ND[idx] * 2 + TSUMO_ND_PAY_D[idx],
+      payNonDealer: TSUMO_ND_PAY_ND[idx],
+      payDealer: TSUMO_ND_PAY_D[idx],
+      mode: "tsumo-nonDealer"
+    };
+  }
+
+  function compute(){
+    var s = state.settings;
+    var pts = s.players.map(function(){ return s.startPoints; });
+    state.records.forEach(function(r){
+      for (var i = 0; i < 4; i++) pts[i] += (Number(r.changes[i]) || 0);
+    });
+    for (var i = 0; i < 4; i++){
+      if (state.current.riichi[i]) pts[i] -= RIICHI_VALUE;
+    }
+    var nonRenchan = 0;
+    state.records.forEach(function(r){ if (r.renchan !== true) nonRenchan++; });
+    var currentRound = nonRenchan + 1;
+    var renchan = getRenchanCount();
+    var dealerPriority = ((currentRound - 1) % 4) + 1;
+    var dealerIdx = -1;
+    s.players.forEach(function(p, i){
+      if (p.priority === dealerPriority) dealerIdx = i;
+    });
+    var order = s.players.map(function(p, i){
+      return { i: i, pts: pts[i], prio: p.priority };
+    });
+    order.sort(function(a, b){
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      return a.prio - b.prio;
+    });
+    var ranks = [0,0,0,0];
+    order.forEach(function(o, idx){ ranks[o.i] = idx + 1; });
+    var settle = pts.map(function(p, i){
+      var rank = ranks[i];
+      var head = rank === 1 ? s.headPrize * 3 : -s.headPrize;
+      return (p - s.startPoints) + head + s.rankPrize[rank - 1];
+    });
+    var riichiCount = state.current.riichi.filter(Boolean).length;
+    var onTable = state.carryover + riichiCount;
+    return {
+      pts: pts, currentRound: currentRound, renchan: renchan,
+      dealerPriority: dealerPriority, dealerIdx: dealerIdx,
+      ranks: ranks, settle: settle, onTable: onTable, riichiCount: riichiCount
+    };
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function getHan(){
+    return parseInt(document.getElementById("hanInput").value, 10) || 0;
+  }
+
+  function computePreview(){
+    var changes = [0,0,0,0];
+    var notes = [];
+    var c = compute();
+    var n = getRenchanCount();
+
+    if (currentMode === "draw"){
+      var tpCount = tenpai.filter(Boolean).length;
+      if (tpCount === 0 || tpCount === 4){
+        notes.push("全听或全不听，无罚符");
+      } else if (tpCount === 1){
+        for (var i = 0; i < 4; i++) changes[i] = tenpai[i] ? 12 : -4;
+        notes.push("1听3不听：听牌者 +12，未听者各 −4");
+      } else if (tpCount === 2){
+        for (var i = 0; i < 4; i++) changes[i] = tenpai[i] ? 6 : -6;
+        notes.push("2听2不听：听牌者各 +6，未听者各 −6");
+      } else {
+        for (var i = 0; i < 4; i++) changes[i] = tenpai[i] ? 4 : -12;
+        notes.push("3听1不听：听牌者各 +4，未听者 −12");
+      }
+      for (var i = 0; i < 4; i++){
+        if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE;
+      }
+      return { changes: changes, notes: notes };
+    }
+
+    var han = getHan();
+    if (selectedWinner < 0 || han <= 0) {
+      for (var i = 0; i < 4; i++){
+        if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE;
+      }
+      return { changes: changes, notes: [] };
+    }
+
+    var isDealerWin = selectedWinner === c.dealerIdx;
+    var isTsumo = currentMode === "tsumo";
+    var p = computePoints(han, isDealerWin, isTsumo);
+    if (!p) return { changes: changes, notes: [] };
+
+    if (!isTsumo){
+      if (selectedLoser < 0 || selectedLoser === selectedWinner){
+        for (var i = 0; i < 4; i++){
+          if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE;
+        }
+        return { changes: changes, notes: ["请选择放铳者"] };
+      }
+      changes[selectedWinner] += p.total;
+      changes[selectedLoser] -= p.total;
+      notes.push(TIER_NAMES[hanToTier(han) - 1] + "：" + state.settings.players[selectedWinner].name + " +" + p.total + "，放铳 −" + p.total);
+    } else if (p.mode === "tsumo-dealer"){
+      for (var i = 0; i < 4; i++){
+        if (i === selectedWinner) changes[i] += p.total;
+        else changes[i] -= p.each;
+      }
+      notes.push(TIER_NAMES[hanToTier(han) - 1] + "庄家自摸：每家 −" + p.each + "，赢家 +" + p.total);
+    } else {
+      for (var i = 0; i < 4; i++){
+        if (i === selectedWinner) changes[i] += p.total;
+        else if (i === c.dealerIdx) changes[i] -= p.payDealer;
+        else changes[i] -= p.payNonDealer;
+      }
+      notes.push(TIER_NAMES[hanToTier(han) - 1] + "闲家自摸：庄 −" + p.payDealer + "，闲各 −" + p.payNonDealer + "，赢家 +" + p.total);
+    }
+
+    if (n > 0){
+      var bonus = n * RENCHAN_BONUS;
+      changes[selectedWinner] += bonus;
+      if (!isTsumo){
+        changes[selectedLoser] -= bonus;
+      } else {
+        var each = Math.round(bonus / 3);
+        for (var i = 0; i < 4; i++){
+          if (i !== selectedWinner) changes[i] -= each;
+        }
+      }
+      notes.push("连庄" + n + "：赢家额外 +" + bonus);
+    }
+
+    var riichiCount = state.current.riichi.filter(Boolean).length;
+    var onTable = state.carryover + riichiCount;
+    if (onTable > 0){
+      changes[selectedWinner] += onTable * RIICHI_VALUE;
+      notes.push("立直棒 +" + (onTable * RIICHI_VALUE));
+    }
+
+    for (var i = 0; i < 4; i++){
+      if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE;
+    }
+
+    return { changes: changes, notes: notes };
+  }
+
+  function render(){
+    var c = compute();
+    var s = state.settings;
+
+    document.getElementById("roundName").textContent = roundName(c.currentRound);
+    document.getElementById("renchan").textContent = c.renchan;
+    document.getElementById("renchanBonus").textContent =
+      c.renchan > 0 ? "（+" + (RENCHAN_BONUS * c.renchan) + "）" : "";
+    document.getElementById("onTable").textContent = c.onTable;
+
+    var totalCheck = c.pts.reduce(function(a,b){ return a+b; }, 0) + c.onTable * RIICHI_VALUE;
+    var totalEl = document.getElementById("total");
+    totalEl.textContent = totalCheck;
+    totalEl.style.color = totalCheck === s.startPoints * 4 ? "" : "#ef4444";
+
+    var dealerIdx = c.dealerIdx;
+    document.getElementById("dealerName").textContent =
+      dealerIdx >= 0 ? s.players[dealerIdx].name : "-";
+
+    var playersEl = document.getElementById("players");
+    playersEl.innerHTML = "";
+    s.players.forEach(function(p, i){
+      var div = document.createElement("div");
+      var cls = "player";
+      if (i === dealerIdx) cls += " dealer";
+      if (state.current.riichi[i]) cls += " riichi";
+      div.className = cls;
+      var rankClass = c.ranks[i] === 1 ? "r1" : (c.ranks[i] === 4 ? "r4" : "");
+      var settleClass = c.settle[i] > 0 ? "pos" : (c.settle[i] < 0 ? "neg" : "");
+      var settleStr = (c.settle[i] > 0 ? "+" : "") + c.settle[i];
+      var ptsClass = c.pts[i] < 0 ? "pts neg" : "pts";
+      var riichiOn = state.current.riichi[i];
+
+      div.innerHTML =
+        '<div class="player-top">' +
+          '<span class="name">' + escapeHtml(p.name) + '</span>' +
+          '<button type="button" class="riichi-btn' + (riichiOn ? ' on' : '') + '" data-idx="' + i + '">' +
+            (riichiOn ? '立直中' : '立直') +
+          '</button>' +
+        '</div>' +
+        '<div class="player-bottom">' +
+          '<span class="' + ptsClass + '">' + c.pts[i] + '</span>' +
+          '<span class="rank ' + rankClass + '">' + c.ranks[i] + '位</span>' +
+          '<span class="settle ' + settleClass + '">' + settleStr + '</span>' +
+        '</div>';
+      playersEl.appendChild(div);
+    });
+
+    renderWinnerBtns();
+    renderLoserBtns();
+    renderTenpaiBtns();
+    applyModeUI();
+    updateTierHint();
+
+    var recEl = document.getElementById("records");
+    recEl.innerHTML = "";
+    var roundCounter = 1;
+    state.records.forEach(function(r, idx){
+      var thisRound = roundCounter;
+      if (r.renchan !== true) roundCounter++;
+      var div = document.createElement("div");
+      div.className = "rec";
+      var chgStr = r.changes.map(function(v, i){
+        var nn = Number(v) || 0;
+        return s.players[i].name + (nn > 0 ? "+" : "") + nn;
+      }).join("  ");
+      var tags = "";
+      if (r.renchan === true) tags += '<span class="tag renchan">连庄</span>';
+      if (r.riichiCount > 0) tags += '<span class="tag riichi">立直×' + r.riichiCount + '</span>';
+      if (r.mode === "draw" || r.winner === -1) tags += '<span class="tag draw">流局</span>';
+      else if (typeof r.winner === "number" && r.winner >= 0 && s.players[r.winner]){
+        tags += '<span class="tag ' + (r.mode === "tsumo" ? 'tsumo' : 'win') + '">' +
+          escapeHtml(s.players[r.winner].name) + (r.mode === "tsumo" ? '自摸' : '和') + '</span>';
+        if (r.han > 0) tags += '<span class="tag han">' + r.han + '翻</span>';
+      }
+      div.innerHTML =
+        '<div class="meta">' +
+          '<div><span class="round">' + roundName(thisRound) + '</span>' + tags + '</div>' +
+          '<div class="chg">' + escapeHtml(chgStr) + (r.note ? ' · ' + escapeHtml(r.note) : '') + '</div>' +
+        '</div>' +
+        '<button data-del="' + idx + '">删除</button>';
+      recEl.appendChild(div);
+    });
+
+    recEl.querySelectorAll("button[data-del]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var i = Number(btn.getAttribute("data-del"));
+        if (confirm("删除这条记录？")){
+          state.records.splice(i, 1);
+          state.carryover = recalcCarryover();
+          save(); render();
+        }
+      });
+    });
+
+    updatePreview();
+  }
+
+  function recalcCarryover(){
+    var co = 0;
+    state.records.forEach(function(r){
+      if (r.mode === "draw" || r.winner === -1 || r.winner === null){
+        co += (r.riichiCount || 0);
+      } else if (typeof r.winner === "number" && r.winner >= 0){
+        co = 0;
+      }
+    });
+    return co;
+  }
+
+  function renderWinnerBtns(){
+    var el = document.getElementById("winnerBtns");
+    el.innerHTML = "";
+    var s = state.settings;
+    s.players.forEach(function(p, i){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = p.name;
+      btn.setAttribute("data-winner", i);
+      if (i === selectedWinner) btn.className = "active";
+      el.appendChild(btn);
+    });
+  }
+
+  function renderLoserBtns(){
+    var el = document.getElementById("loserBtns");
+    el.innerHTML = "";
+    var s = state.settings;
+    s.players.forEach(function(p, i){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = p.name;
+      btn.setAttribute("data-loser", i);
+      if (i === selectedLoser) btn.className = "active";
+      if (i === selectedWinner) btn.disabled = true;
+      el.appendChild(btn);
+    });
+  }
+
+  function renderTenpaiBtns(){
+    var el = document.getElementById("tenpaiBtns");
+    el.innerHTML = "";
+    var s = state.settings;
+    s.players.forEach(function(p, i){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = p.name;
+      btn.setAttribute("data-tenpai", i);
+      if (tenpai[i]) btn.className = "active";
+      el.appendChild(btn);
+    });
+  }
+
+  function applyModeUI(){
+    var winArea = document.getElementById("winArea");
+    var drawArea = document.getElementById("drawArea");
+    var loserLine = document.getElementById("loserLine");
+    if (currentMode === "draw"){
+      winArea.style.display = "none";
+      drawArea.style.display = "block";
+    } else {
+      winArea.style.display = "block";
+      drawArea.style.display = "none";
+      loserLine.style.display = currentMode === "ron" ? "flex" : "none";
+    }
+  }
+
+  function updateTierHint(){
+    var han = getHan();
+    var el = document.getElementById("tierHint");
+    if (han <= 0){ el.textContent = "—"; return; }
+    var tier = hanToTier(han);
+    el.textContent = TIER_NAMES[tier - 1];
+  }
+
+  function updatePreview(){
+    var el = document.getElementById("preview");
+    var pv = computePreview();
+    var s = state.settings;
+    var html = "";
+    if (pv.notes && pv.notes.length){
+      pv.notes.forEach(function(n){
+        html += '<div class="pv-row"><span class="pv-note">' + escapeHtml(n) + '</span></div>';
+      });
+    }
+    var allZero = pv.changes.every(function(v){ return v === 0; });
+    if (!allZero){
+      s.players.forEach(function(p, i){
+        var v = pv.changes[i];
+        if (v === 0) return;
+        var cls = v > 0 ? "pv-pos" : "pv-neg";
+        var sign = v > 0 ? "+" : "";
+        html += '<div class="pv-row"><span>' + escapeHtml(p.name) + '</span><b class="' + cls + '">' + sign + v + '</b></div>';
+      });
+    }
+    el.innerHTML = html || '<span class="pv-tag">选择赢家、放铳者和翻数后显示预览</span>';
+  }
+
+  document.getElementById("modeTabs").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-mode]");
+    if (!btn) return;
+    currentMode = btn.getAttribute("data-mode");
+    document.querySelectorAll("#modeTabs button").forEach(function(b){
+      b.className = b.getAttribute("data-mode") === currentMode ? "active" : "";
+    });
+    applyModeUI();
+    updatePreview();
+  });
+
+  document.getElementById("winnerBtns").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-winner]");
+    if (!btn) return;
+    selectedWinner = Number(btn.getAttribute("data-winner"));
+    if (selectedLoser === selectedWinner) selectedLoser = -1;
+    renderWinnerBtns();
+    renderLoserBtns();
+    updatePreview();
+  });
+
+  document.getElementById("loserBtns").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-loser]");
+    if (!btn || btn.disabled) return;
+    selectedLoser = Number(btn.getAttribute("data-loser"));
+    renderLoserBtns();
+    updatePreview();
+  });
+
+  document.getElementById("tenpaiBtns").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-tenpai]");
+    if (!btn) return;
+    var i = Number(btn.getAttribute("data-tenpai"));
+    tenpai[i] = !tenpai[i];
+    renderTenpaiBtns();
+    updatePreview();
+  });
+
+  document.getElementById("hanInput").addEventListener("input", function(){
+    updateTierHint();
+    updatePreview();
+  });
+
+  document.getElementById("hanQuick").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-han]");
+    if (!btn) return;
+    document.getElementById("hanInput").value = btn.getAttribute("data-han");
+    document.querySelectorAll("#hanQuick button").forEach(function(b){ b.className = ""; });
+    btn.className = "active";
+    updateTierHint();
+    updatePreview();
+  });
+
+  document.getElementById("players").addEventListener("click", function(e){
+    var btn = e.target.closest(".riichi-btn");
+    if (!btn) return;
+    var idx = Number(btn.getAttribute("data-idx"));
+    state.current.riichi[idx] = !state.current.riichi[idx];
+    save();
+    render();
+  });
+
+  document.getElementById("form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var pv = computePreview();
+    var changes = pv.changes;
+    var winner = currentMode === "draw" ? -1 : selectedWinner;
+    var han = getHan();
+    var riichiCount = state.current.riichi.filter(Boolean).length;
+
+    if (currentMode !== "draw"){
+      if (winner < 0){ alert("请选择赢家"); return; }
+      if (han <= 0){ alert("请输入翻数"); return; }
+      if (currentMode === "ron" && selectedLoser < 0){ alert("请选择放铳者"); return; }
+    }
+
+    if (currentMode === "draw"){
+      state.carryover += riichiCount;
+    } else {
+      state.carryover = 0;
+    }
+
+    var renchan = document.getElementById("renchanChk").checked;
+    var note = document.getElementById("note").value.trim();
+
+    state.records.push({
+      mode: currentMode,
+      changes: changes,
+      renchan: renchan,
+      note: note,
+      winner: winner,
+      loser: currentMode === "ron" ? selectedLoser : -1,
+      han: han,
+      riichiCount: riichiCount,
+      tenpai: tenpai.slice()
+    });
+
+    state.current.riichi = [false, false, false, false];
+    selectedWinner = -1;
+    selectedLoser = -1;
+    tenpai = [false, false, false, false];
+    document.getElementById("hanInput").value = "";
+    document.getElementById("renchanChk").checked = false;
+    document.getElementById("note").value = "";
+    document.querySelectorAll("#hanQuick button").forEach(function(b){ b.className = ""; });
+
+    save();
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  document.getElementById("btnUndo").addEventListener("click", function(){
+    if (state.records.length === 0) return;
+    if (!confirm("撤销最后一局？")) return;
+    state.records.pop();
+    state.carryover = recalcCarryover();
+    state.current.riichi = [false, false, false, false];
+    save(); render();
+  });
+
+  document.getElementById("btnExport").addEventListener("click", function(){
+    var data = JSON.stringify(state, null, 2);
+    var blob = new Blob([data], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "mahjong_" + new Date().toISOString().slice(0,10) + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("btnImport").addEventListener("click", function(){
+    var input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.addEventListener("change", function(){
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(){
+        try {
+          var data = JSON.parse(reader.result);
+          if (!data.settings || !data.records) throw new Error("格式不对");
+          if (!confirm("导入会覆盖当前数据，继续？")) return;
+          if (typeof data.settings.headPrize !== "number") data.settings.headPrize = 10;
+          if (!Array.isArray(data.settings.rankPrize)) data.settings.rankPrize = [15, 5, -5, -15];
+          if (typeof data.carryover !== "number") data.carryover = 0;
+          if (!data.current) data.current = { riichi: [false,false,false,false] };
+          state = data;
+          save(); render();
+        } catch(err){
+          alert("导入失败：" + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  });
+
+  var modal = document.getElementById("settingsModal");
+
+  function openSettings(){
+    var s = state.settings;
+    document.getElementById("setRoom").value = ROOM || "";
+    document.getElementById("setStart").value = s.startPoints;
+    document.getElementById("setHeadPrize").value = s.headPrize;
+    document.getElementById("setRank1").value = s.rankPrize[0];
+    document.getElementById("setRank2").value = s.rankPrize[1];
+    document.getElementById("setRank3").value = s.rankPrize[2];
+    document.getElementById("setRank4").value = s.rankPrize[3];
+    var pf = document.getElementById("playerFields");
+    pf.innerHTML = "";
+    s.players.forEach(function(p, i){
+      var div = document.createElement("div");
+      div.className = "grid2";
+      div.innerHTML =
+        '<div class="field"><label>玩家' + (i+1) + '名</label>' +
+        '<input type="text" data-pname="' + i + '" value="' + escapeHtml(p.name) + '"></div>' +
+        '<div class="field"><label>起家优先</label>' +
+        '<input type="number" data-pprio="' + i + '" value="' + p.priority + '"></div>';
+      pf.appendChild(div);
+    });
+    modal.classList.add("open");
+  }
+
+  document.getElementById("btnSettings").addEventListener("click", openSettings);
+  document.getElementById("syncStatus").addEventListener("click", openSettings);
+
+  document.getElementById("btnCancelSettings").addEventListener("click", function(){
+    modal.classList.remove("open");
+  });
+
+  modal.addEventListener("click", function(e){
+    if (e.target === modal) modal.classList.remove("open");
+  });
+
+  document.getElementById("btnSaveSettings").addEventListener("click", function(){
+    var s = state.settings;
+    var newRoom = document.getElementById("setRoom").value.trim();
+    s.startPoints = Number(document.getElementById("setStart").value) || 100;
+    s.headPrize = Number(document.getElementById("setHeadPrize").value) || 10;
+    s.rankPrize = [
+      Number(document.getElementById("setRank1").value) || 15,
+      Number(document.getElementById("setRank2").value) || 5,
+      Number(document.getElementById("setRank3").value) || -5,
+      Number(document.getElementById("setRank4").value) || -15
+    ];
+    document.querySelectorAll("[data-pname]").forEach(function(inp){
+      var i = Number(inp.getAttribute("data-pname"));
+      s.players[i].name = inp.value.trim() || ("玩家" + (i+1));
+    });
+    document.querySelectorAll("[data-pprio]").forEach(function(inp){
+      var i = Number(inp.getAttribute("data-pprio"));
+      s.players[i].priority = Number(inp.value) || (i+1);
+    });
+    if (newRoom !== ROOM){
+      ROOM = newRoom;
+      if (ROOM) localStorage.setItem(ROOM_KEY, ROOM);
+      else localStorage.removeItem(ROOM_KEY);
+    }
+    save(); render();
+    modal.classList.remove("open");
+    setSync(ROOM ? "pending" : "idle");
+    schedulePublish();
+  });
+
+  render();
+  setSync(ROOM ? "pending" : "idle");
+  schedulePublish();
+})();
+</script>
+</body>
+</html>

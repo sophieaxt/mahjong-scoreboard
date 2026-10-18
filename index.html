@@ -354,7 +354,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v21";
+  var STORAGE_KEY = "mahjong_scoreboard_v22";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -378,7 +378,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       rankPrize: [15, 5, -5, -15], westGate: 110,
       seatDirection: "down",
       players: [
-        { name: "荣", priority: 1, avatar: "https://megapx-assets.dcard.tw/images/38db5822-17ea-4b24-81f3-cf34c95bb6c2/640.jpeg" },
+        { name: "荣", priority: 1, avatar: "https://cdn.jsdelivr.net/gh/sophieaxt/mahjong-scoreboard@main/rong.jpg" },
         { name: "颖", priority: 2, avatar: "" },
         { name: "雯", priority: 3, avatar: "" },
         { name: "马", priority: 4, avatar: "" }
@@ -499,7 +499,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v20","mahjong_scoreboard_v19","mahjong_scoreboard_v18"];
+        var keys = ["mahjong_scoreboard_v21","mahjong_scoreboard_v20","mahjong_scoreboard_v19"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -600,7 +600,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 21, settings: state.settings, pts: c.pts, current: state.current,
+      v: 22, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -800,11 +800,11 @@ form.input.locked{opacity:.4;pointer-events:none}
 
   function avatarInner(player, idx){
     var a = (player.avatar || "").trim();
+    var ch = (player.name || "?").trim().charAt(0) || "?";
     if (/^https?:\/\//i.test(a)){
-      return '<img src="' + escapeHtml(a) + '" alt="" onerror="this.style.display=\'none\'">';
+      return '<img src="' + escapeHtml(a) + '" alt="' + escapeHtml(ch) + '" data-fallback="' + escapeHtml(ch) + '" onerror="this.outerHTML=this.getAttribute(\'data-fallback\')||\'?\'">';
     }
     if (a) return escapeHtml(a);
-    var ch = (player.name || "?").trim().charAt(0) || "?";
     return escapeHtml(ch);
   }
 
@@ -1607,7 +1607,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     record.winner = winnersForRecord.length > 0 ? winnersForRecord[0].idx : -1;
     record.han = winnersForRecord.length > 0 ? winnersForRecord[0].han : 0;
 
-    // 生成动画事件
     if (currentMode === "tsumo" && winnersForRecord.length > 0){
       var widx = winnersForRecord[0].idx;
       var payerIdxs = [];

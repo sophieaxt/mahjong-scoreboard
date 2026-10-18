@@ -37,14 +37,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .chip.riichi-chip .value{color:var(--red)}
 .chip.total-chip.warn .value{color:var(--red)}
 
-/* ===== End Banner ===== */
-.end-banner{display:none;text-align:center;font-size:2.4vh;font-weight:800;
-  padding:1.2vh 2vw;border-radius:1.2vh;letter-spacing:.15vw;
-  background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;
-  border:1px solid #dc2626;box-shadow:0 0 2vh rgba(239,68,68,.4)}
-.end-banner.show{display:block}
-
-/* ===== Player Grid ===== */
+/* ===== 正常比赛网格 ===== */
 .grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.1vh 1.1vw;min-height:0}
 .player{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.2vw;display:flex;flex-direction:column;gap:1.2vh;overflow:hidden;transition:all .3s}
 .player.pos-0{grid-column:1;grid-row:1}
@@ -89,81 +82,245 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .settle.pos{color:var(--green)}
 .settle.neg{color:var(--red)}
 
-/* ===== 结算列表 ===== */
-.day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1}
-.day-summary.show{display:flex}
-.day-summary-header{text-align:center;display:flex;justify-content:center;align-items:baseline;gap:2vw;flex-wrap:wrap;flex-shrink:0}
-.ds-title{font-size:3.6vh;font-weight:900;color:var(--gold);letter-spacing:.2vw;text-shadow:0 0 3vh rgba(251,191,36,.4)}
-.ds-subtitle{font-size:1.8vh;color:var(--muted)}
+/* ===== 本场结算视图 ===== */
+.match-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1}
+.match-summary.show{display:flex}
+.ms-header{text-align:center;flex-shrink:0}
+.ms-title{font-size:4vh;font-weight:900;color:var(--gold);letter-spacing:.25vw;
+  text-shadow:0 0 4vh rgba(251,191,36,.5);margin-bottom:.5vh}
+.ms-subtitle{font-size:2vh;color:var(--muted);font-weight:600}
+.ms-list{flex:1;display:flex;flex-direction:column;gap:1.1vh;min-height:0}
 
-.day-summary-list{flex:1;display:flex;flex-direction:column;gap:1.2vh;min-height:0}
-
-.ds-row{
+.ms-row{
   flex:1;display:flex;align-items:center;gap:2vw;
   padding:1.5vh 2.5vw;
   background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));
-  border:2px solid var(--line);
-  border-radius:1.6vh;
+  border:2px solid var(--line);border-radius:1.6vh;
   position:relative;overflow:hidden;
 }
-.ds-row.rank1{
-  flex:1.25;
+.ms-row.rank1{
+  flex:1.3;
   border-color:var(--gold);
   background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));
-  box-shadow:0 0 3vh rgba(251,191,36,.4),inset 0 0 2vh rgba(251,191,36,.06);
+  box-shadow:0 0 4vh rgba(251,191,36,.5),inset 0 0 3vh rgba(251,191,36,.08);
+  animation:winner-glow 2.5s ease-in-out infinite;
 }
-.ds-row.rank1::before{
-  content:"";position:absolute;left:0;top:0;bottom:0;width:.8vw;
+@keyframes winner-glow{
+  0%,100%{box-shadow:0 0 4vh rgba(251,191,36,.5),inset 0 0 3vh rgba(251,191,36,.08)}
+  50%{box-shadow:0 0 7vh rgba(251,191,36,.8),inset 0 0 3.5vh rgba(251,191,36,.15)}
+}
+.ms-row.rank1::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:1vw;
   background:linear-gradient(180deg,#fbbf24,#f59e0b);
-  box-shadow:0 0 2vh var(--gold);
+  box-shadow:0 0 2.5vh var(--gold);
 }
 
-.ds-rank-num{
+.ms-rank{
   width:8vh;height:8vh;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   font-size:4.5vh;font-weight:900;flex-shrink:0;
-  background:var(--card);color:var(--muted);
-  border:2px solid var(--line);
+  background:var(--card);color:var(--muted);border:2px solid var(--line);
   font-variant-numeric:tabular-nums;
 }
-.ds-row.rank1 .ds-rank-num{
-  width:10vh;height:10vh;font-size:5.5vh;
-  background:linear-gradient(135deg,#fbbf24,#f59e0b);
-  color:#1a1208;border-color:var(--gold);
-  box-shadow:0 0 2.5vh rgba(251,191,36,.6);
+.ms-row.rank1 .ms-rank{
+  width:11vh;height:11vh;font-size:6vh;
+  background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1208;
+  border-color:var(--gold);box-shadow:0 0 3vh rgba(251,191,36,.7);
+  animation:rank-bounce 1.6s ease-in-out infinite;
+}
+@keyframes rank-bounce{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.08)}
 }
 
-.ds-avatar{
-  width:9vh;height:9vh;border-radius:50%;
-  font-size:4.5vh;font-weight:800;
+.ms-trophy{
+  font-size:9vh;flex-shrink:0;line-height:1;
+  filter:drop-shadow(0 0 2vh rgba(251,191,36,.8));
+  animation:trophy-float 2.4s ease-in-out infinite;
+}
+.ms-row.rank1 .ms-trophy{font-size:12vh}
+@keyframes trophy-float{
+  0%,100%{transform:translateY(0) rotate(-5deg)}
+  50%{transform:translateY(-1.5vh) rotate(5deg)}
+}
+
+.ms-avatar{
+  width:9vh;height:9vh;border-radius:50%;font-size:4.5vh;font-weight:800;
   display:flex;align-items:center;justify-content:center;
   overflow:hidden;color:#fff;flex-shrink:0;
   border:3px solid rgba(255,255,255,.15);
   box-shadow:0 4px 16px rgba(0,0,0,.5);
 }
-.ds-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.ds-row.rank1 .ds-avatar{
-  width:11vh;height:11vh;font-size:5.5vh;
+.ms-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.ms-row.rank1 .ms-avatar{
+  width:12vh;height:12vh;font-size:6vh;
   border-color:var(--gold);
-  box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 2.5vh rgba(251,191,36,.5);
+  box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 3vh rgba(251,191,36,.6);
 }
 
-.ds-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:.6vh}
-.ds-name{font-size:3.2vh;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ds-row.rank1 .ds-name{color:var(--gold);font-size:3.8vh;text-shadow:0 0 1.5vh rgba(251,191,36,.4)}
-.ds-stats{font-size:1.7vh;color:var(--muted);display:flex;gap:1.5vw;flex-wrap:wrap}
-.ds-stats b{color:var(--text);font-weight:800}
-.ds-row.rank1 .ds-stats b{color:var(--gold)}
+.ms-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:.6vh}
+.ms-name{font-size:3.2vh;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-row.rank1 .ms-name{color:var(--gold);font-size:4.2vh;text-shadow:0 0 2vh rgba(251,191,36,.5)}
+.ms-pts{font-size:1.8vh;color:var(--muted);font-weight:600}
+.ms-row.rank1 .ms-pts{font-size:2.2vh;color:#fcd34d}
 
-.ds-total{
+.ms-settle{
   font-size:6.5vh;font-weight:900;line-height:1;
   letter-spacing:-.15vw;font-variant-numeric:tabular-nums;
   text-shadow:0 3px 12px rgba(0,0,0,.5);
   flex-shrink:0;text-align:right;
 }
-.ds-total.pos{color:var(--green)}
-.ds-total.neg{color:var(--red)}
-.ds-row.rank1 .ds-total{font-size:8vh}
+.ms-settle.pos{color:var(--green)}
+.ms-settle.neg{color:var(--red)}
+.ms-row.rank1 .ms-settle{font-size:9vh;color:var(--gold);text-shadow:0 0 3vh rgba(251,191,36,.6)}
+
+/* ===== 今日总冠军视图 ===== */
+.day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1;position:relative;overflow:hidden}
+.day-summary.show{display:flex}
+
+.day-summary::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 30%,rgba(251,191,36,.18) 0%,transparent 60%);
+  pointer-events:none;
+}
+
+.confetti{
+  position:absolute;top:-10vh;font-size:3vh;
+  animation:confetti-fall linear infinite;
+  pointer-events:none;
+  z-index:0;
+}
+@keyframes confetti-fall{
+  0%{transform:translateY(-10vh) rotate(0deg);opacity:1}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0}
+}
+
+.ds-header{text-align:center;flex-shrink:0;position:relative;z-index:2}
+.ds-crown{
+  font-size:8vh;line-height:1;margin-bottom:.5vh;
+  filter:drop-shadow(0 0 3vh rgba(251,191,36,.9));
+  animation:crown-float 3s ease-in-out infinite;
+}
+@keyframes crown-float{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-1.5vh) scale(1.05)}
+}
+.ds-title{
+  font-size:5vh;font-weight:900;color:var(--gold);
+  letter-spacing:.5vw;
+  text-shadow:0 0 4vh rgba(251,191,36,.7),0 4px 8px rgba(0,0,0,.5);
+  margin-bottom:.5vh;
+  background:linear-gradient(135deg,#fbbf24,#f59e0b,#fbbf24);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.ds-subtitle{font-size:1.8vh;color:var(--muted);font-weight:600}
+
+.champion-area{
+  flex:1.3;display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:2;min-height:0;
+}
+.champion-card{
+  display:flex;align-items:center;gap:2.5vw;
+  padding:2.5vh 3.5vw;
+  background:linear-gradient(135deg,rgba(58,42,16,.98),rgba(40,28,10,.98));
+  border:3px solid var(--gold);
+  border-radius:2.5vh;
+  box-shadow:0 0 6vh rgba(251,191,36,.6),inset 0 0 3vh rgba(251,191,36,.15);
+  position:relative;
+  max-width:90%;
+  animation:champion-glow 2.5s ease-in-out infinite;
+}
+@keyframes champion-glow{
+  0%,100%{box-shadow:0 0 6vh rgba(251,191,36,.6),inset 0 0 3vh rgba(251,191,36,.15)}
+  50%{box-shadow:0 0 10vh rgba(251,191,36,.9),inset 0 0 4vh rgba(251,191,36,.25)}
+}
+.champion-card::before,
+.champion-card::after{
+  content:"🌸";position:absolute;font-size:4vh;
+  filter:drop-shadow(0 0 1vh rgba(251,191,36,.6));
+  animation:petal-swing 3s ease-in-out infinite;
+}
+.champion-card::before{top:-2vh;left:2vw;animation-delay:0s}
+.champion-card::after{top:-2vh;right:2vw;animation-delay:1.5s}
+@keyframes petal-swing{
+  0%,100%{transform:rotate(-15deg) translateY(0)}
+  50%{transform:rotate(15deg) translateY(-1vh)}
+}
+
+.champion-avatar{
+  width:20vh;height:20vh;border-radius:50%;font-size:10vh;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;color:#fff;flex-shrink:0;
+  border:5px solid var(--gold);
+  box-shadow:0 0 4vh rgba(251,191,36,.8),inset 0 0 3vh rgba(251,191,36,.3);
+}
+.champion-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+
+.champion-info{display:flex;flex-direction:column;gap:1vh;min-width:0}
+.champion-title{font-size:2vh;color:#fcd34d;font-weight:800;letter-spacing:.3vw}
+.champion-name{
+  font-size:5.5vh;font-weight:900;color:var(--gold);
+  text-shadow:0 0 3vh rgba(251,191,36,.6);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.champion-score{
+  font-size:11vh;font-weight:900;line-height:1;letter-spacing:-.2vw;
+  font-variant-numeric:tabular-nums;
+  color:var(--gold);
+  text-shadow:0 0 4vh rgba(251,191,36,.6),0 4px 12px rgba(0,0,0,.6);
+}
+.champion-stats{font-size:2vh;color:#fcd34d;font-weight:600;display:flex;gap:2vw;flex-wrap:wrap}
+.champion-stats b{color:var(--gold);font-size:2.4vh}
+
+.runners-area{
+  flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5vw;
+  min-height:0;position:relative;z-index:2;
+}
+.runner-card{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.8vh;padding:1.5vh 1vw;
+  background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));
+  border:2px solid var(--line);border-radius:1.6vh;
+  position:relative;
+}
+.runner-card.rank2{border-color:#c0c0c0;box-shadow:0 0 2vh rgba(192,192,192,.3)}
+.runner-card.rank3{border-color:#cd7f32;box-shadow:0 0 2vh rgba(205,127,50,.3)}
+.runner-card.rank4{border-color:#6b7280}
+
+.runner-rank{
+  position:absolute;top:1vh;right:1vw;
+  font-size:2vh;font-weight:900;
+  padding:.4vh 1vw;border-radius:.6vh;
+  background:var(--line);color:var(--text);
+}
+.runner-card.rank2 .runner-rank{background:linear-gradient(135deg,#e5e7eb,#9ca3af);color:#1a1208}
+.runner-card.rank3 .runner-rank{background:linear-gradient(135deg,#d97706,#92400e);color:#fff}
+.runner-card.rank4 .runner-rank{background:#4b5563;color:#e5e7eb}
+
+.runner-avatar{
+  width:9vh;height:9vh;border-radius:50%;font-size:4.5vh;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;color:#fff;flex-shrink:0;
+  border:2px solid rgba(255,255,255,.2);
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+}
+.runner-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.runner-card.rank2 .runner-avatar{border-color:#e5e7eb;box-shadow:0 0 2vh rgba(192,192,192,.5)}
+.runner-card.rank3 .runner-avatar{border-color:#d97706;box-shadow:0 0 2vh rgba(205,127,50,.5)}
+
+.runner-name{
+  font-size:2.6vh;font-weight:800;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
+}
+.runner-score{
+  font-size:4.5vh;font-weight:900;
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.runner-score.pos{color:var(--green)}
+.runner-score.neg{color:var(--red)}
+.runner-stats{font-size:1.5vh;color:var(--muted);text-align:center}
+.runner-stats b{color:var(--text)}
 
 .status{text-align:center;font-size:1.4vh;color:var(--muted);height:2vh}
 .status.ok{color:#4ade80}
@@ -172,7 +329,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header id="mainHeader">
     <div class="chip">
       <div class="label">当前局</div>
       <div class="value" id="roundName">东1局</div>
@@ -194,15 +351,27 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
       <div class="value" id="total">400</div>
     </div>
   </header>
-  <div class="end-banner" id="endBanner"></div>
+
   <div class="grid" id="grid"></div>
-  <div class="day-summary" id="daySummary">
-    <div class="day-summary-header">
-      <span class="ds-title">🏆 今日总战绩</span>
-      <span class="ds-subtitle" id="dsDate"></span>
+
+  <div class="match-summary" id="matchSummary">
+    <div class="ms-header">
+      <div class="ms-title">🏁 本场结算</div>
+      <div class="ms-subtitle" id="msSubtitle"></div>
     </div>
-    <div class="day-summary-list" id="dsList"></div>
+    <div class="ms-list" id="msList"></div>
   </div>
+
+  <div class="day-summary" id="daySummary">
+    <div class="ds-header">
+      <div class="ds-crown">👑</div>
+      <div class="ds-title">今日总冠军</div>
+      <div class="ds-subtitle" id="dsDate"></div>
+    </div>
+    <div class="champion-area" id="championArea"></div>
+    <div class="runners-area" id="runnersArea"></div>
+  </div>
+
   <div class="status" id="status">等待手机端数据…</div>
 </div>
 
@@ -216,6 +385,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
   var WINDS_CN = ["东", "南", "西", "北"];
   var WINDS_EN = ["E", "S", "W", "N"];
+  var CONFETTI_EMOJIS = ["🎉", "🎊", "⭐", "✨", "🌟", "💫", "🏆"];
 
   if (!ROOM){
     statusEl.textContent = "缺少 room 参数，请用 display.html?room=房间号 打开";
@@ -269,6 +439,14 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     return true;
   }
 
+  function showNormal(d){
+    document.getElementById("mainHeader").style.display = "";
+    document.getElementById("grid").style.display = "";
+    document.getElementById("matchSummary").classList.remove("show");
+    document.getElementById("daySummary").classList.remove("show");
+    renderNormal(d);
+  }
+
   function renderNormal(d){
     var ps = d.settings.players;
     var current = d.current || { riichi: [false,false,false,false] };
@@ -294,14 +472,6 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
       totalChip.classList.remove("warn");
     } else {
       totalChip.classList.add("warn");
-    }
-
-    var banner = document.getElementById("endBanner");
-    if (d.gameEnded){
-      banner.textContent = "🏁 比赛结束：" + (d.endReason || "");
-      banner.classList.add("show");
-    } else {
-      banner.classList.remove("show");
     }
 
     var rotation = (displayRound - 1) % 4;
@@ -346,57 +516,142 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     });
   }
 
-  function renderDaySummary(d){
-    var list = d.daySummary || [];
-    document.getElementById("dsDate").textContent = d.dayEndedAt ? formatDate(d.dayEndedAt) : "";
-    var container = document.getElementById("dsList");
+  // ===== 本场结算 =====
+  function showMatchSummary(d){
+    document.getElementById("mainHeader").style.display = "none";
+    document.getElementById("grid").style.display = "none";
+    document.getElementById("daySummary").classList.remove("show");
+    document.getElementById("matchSummary").classList.add("show");
+
+    var displayRound = (typeof d.displayRound === "number" && d.displayRound > 0) ? d.displayRound : d.currentRound;
+    var subtitleParts = [];
+    subtitleParts.push(roundName(displayRound) + " 结束");
+    if (d.endReason) subtitleParts.push(d.endReason);
+    document.getElementById("msSubtitle").textContent = subtitleParts.join(" · ");
+
+    var ps = d.settings.players;
+    var list = ps.map(function(p, i){
+      return {
+        name: p.name,
+        avatar: p.avatar || "",
+        pts: d.pts[i],
+        settle: d.settle[i],
+        rank: d.ranks[i]
+      };
+    }).sort(function(a, b){ return a.rank - b.rank; });
+
+    var container = document.getElementById("msList");
     container.innerHTML = "";
 
-    // 按 rank 升序排列，rank 1 在最上
-    var sorted = list.slice().sort(function(a, b){ return a.rank - b.rank; });
-
-    sorted.forEach(function(sm, idx){
+    list.forEach(function(m, idx){
       var row = document.createElement("div");
-      row.className = "ds-row" + (sm.rank === 1 ? " rank1" : "");
+      row.className = "ms-row" + (m.rank === 1 ? " rank1" : "");
 
-      var settleCls = sm.totalSettle > 0 ? "pos" : (sm.totalSettle < 0 ? "neg" : "");
-      var sign = sm.totalSettle > 0 ? "+" : "";
+      var settleCls = m.settle > 0 ? "pos" : (m.settle < 0 ? "neg" : "");
+      var sign = m.settle > 0 ? "+" : "";
       var avBg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-      var ranks = sm.ranks || [0,0,0,0];
-      var firstRate = sm.matches > 0 ? Math.round(ranks[0] / sm.matches * 100) : 0;
+
+      var trophy = "";
+      if (m.rank === 1) trophy = '<div class="ms-trophy">🏆</div>';
 
       row.innerHTML =
-        '<div class="ds-rank-num">' + sm.rank + '</div>' +
-        '<div class="ds-avatar" style="background:' + avBg + '">' + avatarInner(sm) + '</div>' +
-        '<div class="ds-info">' +
-          '<div class="ds-name">' + escapeHtml(sm.name) + '</div>' +
-          '<div class="ds-stats">' +
-            '<span><b>' + sm.matches + '</b> 场</span>' +
-            '<span>一位率 <b>' + firstRate + '%</b></span>' +
-            '<span>顺位 <b>' + ranks[0] + '/' + ranks[1] + '/' + ranks[2] + '/' + ranks[3] + '</b></span>' +
-          '</div>' +
+        '<div class="ms-rank">' + m.rank + '</div>' +
+        trophy +
+        '<div class="ms-avatar" style="background:' + avBg + '">' + avatarInner(m) + '</div>' +
+        '<div class="ms-info">' +
+          '<div class="ms-name">' + escapeHtml(m.name) + (m.rank === 1 ? ' 🎉' : '') + '</div>' +
+          '<div class="ms-pts">' + m.pts + ' 点</div>' +
         '</div>' +
-        '<div class="ds-total ' + settleCls + '">' + sign + sm.totalSettle + '</div>';
+        '<div class="ms-settle ' + settleCls + '">' + sign + m.settle + '</div>';
       container.appendChild(row);
     });
   }
 
+  // ===== 今日总冠军 =====
+  function createConfetti(){
+    var container = document.getElementById("daySummary");
+    // 先清理旧彩带
+    container.querySelectorAll(".confetti").forEach(function(el){ el.remove(); });
+    for (var i = 0; i < 18; i++){
+      var el = document.createElement("div");
+      el.className = "confetti";
+      el.textContent = CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)];
+      el.style.left = (Math.random() * 100) + "%";
+      el.style.animationDuration = (4 + Math.random() * 4) + "s";
+      el.style.animationDelay = (Math.random() * 5) + "s";
+      el.style.fontSize = (2 + Math.random() * 3) + "vh";
+      container.appendChild(el);
+    }
+  }
+
+  function showDaySummary(d){
+    document.getElementById("mainHeader").style.display = "none";
+    document.getElementById("grid").style.display = "none";
+    document.getElementById("matchSummary").classList.remove("show");
+    document.getElementById("daySummary").classList.add("show");
+
+    document.getElementById("dsDate").textContent = d.dayEndedAt ? formatDate(d.dayEndedAt) : "";
+
+    var sorted = (d.daySummary || []).slice().sort(function(a, b){ return a.rank - b.rank; });
+    if (sorted.length === 0) return;
+
+    var champion = sorted[0];
+    var runners = sorted.slice(1);
+
+    // 总冠军卡片
+    var championArea = document.getElementById("championArea");
+    var champRanks = champion.ranks || [0,0,0,0];
+    var champFirstRate = champion.matches > 0 ? Math.round(champRanks[0] / champion.matches * 100) : 0;
+    var champSign = champion.totalSettle > 0 ? "+" : "";
+    var champBg = AVATAR_COLORS[0];
+
+    championArea.innerHTML =
+      '<div class="champion-card">' +
+        '<div class="champion-avatar" style="background:' + champBg + '">' + avatarInner(champion) + '</div>' +
+        '<div class="champion-info">' +
+          '<div class="champion-title">👑 总冠军 · 第 1 位</div>' +
+          '<div class="champion-name">' + escapeHtml(champion.name) + '</div>' +
+          '<div class="champion-score">' + champSign + champion.totalSettle + '</div>' +
+          '<div class="champion-stats">' +
+            '<span><b>' + champion.matches + '</b> 场</span>' +
+            '<span>一位率 <b>' + champFirstRate + '%</b></span>' +
+            '<span>顺位 <b>' + champRanks[0] + '/' + champRanks[1] + '/' + champRanks[2] + '/' + champRanks[3] + '</b></span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // 2~4 名
+    var runnersArea = document.getElementById("runnersArea");
+    runnersArea.innerHTML = "";
+    runners.forEach(function(r, idx){
+      var card = document.createElement("div");
+      card.className = "runner-card rank" + r.rank;
+      var rk = r.ranks || [0,0,0,0];
+      var settleCls = r.totalSettle > 0 ? "pos" : (r.totalSettle < 0 ? "neg" : "");
+      var sign = r.totalSettle > 0 ? "+" : "";
+      var avBg = AVATAR_COLORS[(idx + 1) % AVATAR_COLORS.length];
+      var medal = r.rank === 2 ? "🥈" : (r.rank === 3 ? "🥉" : "");
+
+      card.innerHTML =
+        '<div class="runner-rank">' + r.rank + ' 位</div>' +
+        '<div class="runner-avatar" style="background:' + avBg + '">' + avatarInner(r) + '</div>' +
+        '<div class="runner-name">' + medal + ' ' + escapeHtml(r.name) + '</div>' +
+        '<div class="runner-score ' + settleCls + '">' + sign + r.totalSettle + '</div>' +
+        '<div class="runner-stats"><b>' + r.matches + '</b> 场 · 一位率 <b>' +
+          (r.matches > 0 ? Math.round(rk[0] / r.matches * 100) : 0) + '%</b></div>';
+      runnersArea.appendChild(card);
+    });
+
+    createConfetti();
+  }
+
   function render(d){
-    var dayEl = document.getElementById("daySummary");
-    var gridEl = document.getElementById("grid");
-    var banner = document.getElementById("endBanner");
-    var headerEl = document.querySelector("header");
     if (d.dayEnded && d.daySummary && d.daySummary.length > 0){
-      gridEl.style.display = "none";
-      banner.classList.remove("show");
-      headerEl.style.display = "none";
-      dayEl.classList.add("show");
-      renderDaySummary(d);
+      showDaySummary(d);
+    } else if (d.gameEnded){
+      showMatchSummary(d);
     } else {
-      dayEl.classList.remove("show");
-      gridEl.style.display = "";
-      headerEl.style.display = "";
-      renderNormal(d);
+      showNormal(d);
     }
   }
 

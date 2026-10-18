@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>日麻记分牌 v20</title>
+<title>日麻记分牌</title>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#f59e0b;--green:#22c55e;--red:#ef4444;--riichi:#ef4444;--gold:#fbbf24}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -17,7 +17,6 @@ select{background:var(--card);border:1px solid var(--line);color:var(--text);bor
 header{position:sticky;top:0;z-index:10;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--line)}
 .title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .title{font-size:17px;font-weight:700}
-.title .ver{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
 .sync{font-size:12px;padding:4px 8px;border-radius:8px;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--muted)}
 .sync.ok{color:var(--green);border-color:#14532d;background:#052e16}
 .sync.err{color:var(--red);border-color:#7f1d1d;background:#2a0a0a}
@@ -174,7 +173,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
 <header>
   <div class="title-row">
-    <div class="title">日麻记分牌<span class="ver">v20</span></div>
+    <div class="title">日麻记分牌</div>
     <div class="sync idle" id="syncStatus">● 未同步</div>
   </div>
   <div class="info">
@@ -355,7 +354,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v20";
+  var STORAGE_KEY = "mahjong_scoreboard_v21";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -380,9 +379,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       seatDirection: "down",
       players: [
         { name: "荣", priority: 1, avatar: "https://megapx-assets.dcard.tw/images/38db5822-17ea-4b24-81f3-cf34c95bb6c2/640.jpeg" },
-        { name: "颖", priority: 2, avatar: "🐶" },
-        { name: "雯", priority: 3, avatar: "🦊" },
-        { name: "马", priority: 4, avatar: "🐼" }
+        { name: "颖", priority: 2, avatar: "" },
+        { name: "雯", priority: 3, avatar: "" },
+        { name: "马", priority: 4, avatar: "" }
       ]
     },
     records: [], carryover: 0,
@@ -492,9 +491,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     for (var i = 0; i < records.length; i++){
       if (records[i].renchan !== true) round++;
     }
-    if (records[records.length - 1].renchan === true){
-      return round;
-    }
+    if (records[records.length - 1].renchan === true) return round;
     return round - 1;
   }
 
@@ -502,7 +499,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v19","mahjong_scoreboard_v18","mahjong_scoreboard_v17"];
+        var keys = ["mahjong_scoreboard_v20","mahjong_scoreboard_v19","mahjong_scoreboard_v18"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -603,7 +600,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 20, settings: state.settings, pts: c.pts, current: state.current,
+      v: 21, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -985,7 +982,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     document.getElementById("renchanBonus").textContent =
       c.renchan > 0 ? "（+" + (RENCHAN_BONUS * c.renchan) + "）" : "";
     document.getElementById("onTable").textContent = c.onTable;
-
     document.getElementById("startPlayerName").textContent =
       c.startIdx >= 0 ? s.players[c.startIdx].name : "-";
 
@@ -1189,8 +1185,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
-    state.lastWinAnim = null;
-    state.lastTsumoAnim = null;
+    state.lastWinAnim = null; state.lastTsumoAnim = null;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
     lastFocusedWinnerIdx = -1;
@@ -1246,8 +1241,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.daySummary = computeDaySummary();
     state.dayEnded = true;
     state.dayEndedAt = new Date().toISOString();
-    state.lastWinAnim = null;
-    state.lastTsumoAnim = null;
+    state.lastWinAnim = null; state.lastTsumoAnim = null;
     save(); render(); schedulePublish(); openDaySummary();
   }
 
@@ -1257,8 +1251,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
     state.history = []; state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
-    state.lastWinAnim = null;
-    state.lastTsumoAnim = null;
+    state.lastWinAnim = null; state.lastTsumoAnim = null;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
     lastFocusedWinnerIdx = -1;

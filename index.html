@@ -13,6 +13,7 @@
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;padding-bottom:460px}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
+select{background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px;font-size:16px;width:100%}
 header{position:sticky;top:0;z-index:10;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--line)}
 .title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .title{font-size:17px;font-weight:700}
@@ -24,6 +25,7 @@ header{position:sticky;top:0;z-index:10;background:var(--bg);padding:10px 12px 8
 .chip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:13px;white-space:nowrap}
 .chip b{color:var(--accent)}
 .chip.dealer b{color:#fb923c}
+.chip.start b{color:#22d3ee}
 .chip.riichi b{color:var(--riichi)}
 .chip .bonus{color:var(--accent);font-size:11px;margin-left:2px;font-weight:700}
 .end-banner{display:none;margin:8px 12px;padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;font-size:14px;font-weight:700;text-align:center;border:1px solid #dc2626}
@@ -172,9 +174,10 @@ form.input.locked{opacity:.4;pointer-events:none}
   </div>
   <div class="info">
     <div class="chip">当前局 <b id="roundName">东1局</b></div>
+    <div class="chip start">起家 <b id="startPlayerName">-</b></div>
+    <div class="chip dealer">庄家 <b id="dealerName">-</b></div>
     <div class="chip">连庄 <b id="renchan">0</b><span class="bonus" id="renchanBonus"></span></div>
     <div class="chip riichi">立直棒 <b id="onTable">0</b></div>
-    <div class="chip dealer">庄家 <b id="dealerName">-</b></div>
     <div class="chip">总计 <b id="total">400</b></div>
   </div>
 </header>
@@ -240,14 +243,14 @@ form.input.locked{opacity:.4;pointer-events:none}
       <span class="btn-label">听牌</span>
       <div class="btn-group" id="tenpaiBtns"></div>
     </div>
-    <div class="draw-hint">流局满贯成立时，请改用“自摸”模式、翻数填 4 录入，优先于不听罚则。</div>
+    <div class="draw-hint">流局满贯成立时，请改用"自摸"模式、翻数填 4 录入，优先于不听罚则。</div>
   </div>
 
   <div class="preview" id="preview"></div>
 
   <div class="row2">
     <label class="renchan" id="renchanLabel">
-      <input type="checkbox" id="renchanChk">连庄
+      <input type="checkbox" id="renchanChk" disabled>连庄
       <span class="auto-tag" id="renchanAutoTag" style="display:none">自动</span>
     </label>
     <input class="note" id="note" placeholder="备注">
@@ -322,8 +325,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     </div>
     <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。</div>
 
-    <div class="hint" style="margin-bottom:8px;color:var(--accent)">
-      座位号决定起家顺序：1=起家（东1局庄家）、2=南、3=西、4=北。保存时自动整理为 1/2/3/4，不会重复。
+    <div class="hint" style="margin-bottom:8px;color:#22d3ee">
+      座位说明：1=起家（东1局庄家）、2=起家下家、3=再下家、4=起家上家。保存时自动整理为 1/2/3/4，不会重复。
     </div>
 
     <div id="playerFields"></div>
@@ -339,7 +342,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v10";
+  var STORAGE_KEY = "mahjong_scoreboard_v11";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -357,30 +360,19 @@ form.input.locked{opacity:.4;pointer-events:none}
   var TIER_NAMES = ["1翻", "2翻", "3翻", "满贯", "跳满", "倍满", "三倍满", "役满"];
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
 
-  // ===== 立直音效 =====
   var Sound = (function(){
     var enabled = true;
     var audioUrl = "";
     var audioEl = null;
     var unlocked = false;
-
     function initAudio(){
       if (!audioUrl) return null;
       if (!audioEl){
-        try {
-          audioEl = new Audio();
-          audioEl.preload = "auto";
-          audioEl.src = audioUrl;
-        } catch(e){ audioEl = null; }
+        try { audioEl = new Audio(); audioEl.preload = "auto"; audioEl.src = audioUrl; } catch(e){ audioEl = null; }
       }
       return audioEl;
     }
-
-    function setUrl(url){
-      audioUrl = (url || "").trim();
-      audioEl = null;
-    }
-
+    function setUrl(url){ audioUrl = (url || "").trim(); audioEl = null; }
     function play(){
       if (!enabled || !audioUrl) return;
       var el = initAudio();
@@ -391,7 +383,6 @@ form.input.locked{opacity:.4;pointer-events:none}
         if (p && p.catch) p.catch(function(){});
       } catch(e){}
     }
-
     return {
       setEnabled: function(v){ enabled = !!v; },
       setUrl: setUrl,
@@ -408,9 +399,7 @@ form.input.locked{opacity:.4;pointer-events:none}
               if (p && p.then){
                 p.then(function(){ el.pause(); el.currentTime = 0; el.volume = oldVol; })
                  .catch(function(){ el.volume = oldVol; });
-              } else {
-                el.pause(); el.currentTime = 0; el.volume = oldVol;
-              }
+              } else { el.pause(); el.currentTime = 0; el.volume = oldVol; }
             } catch(e){}
           }
         }
@@ -445,7 +434,6 @@ form.input.locked{opacity:.4;pointer-events:none}
   var selectedWinners = [];
   var selectedLoser = -1;
   var tenpai = [false, false, false, false];
-  var renchanAuto = false;
   var lastFocusedWinnerIdx = -1;
 
   function normalizeSettings(s){
@@ -459,11 +447,12 @@ form.input.locked{opacity:.4;pointer-events:none}
     s.players.forEach(function(p){ if (typeof p.avatar !== "string") p.avatar = ""; });
   }
 
-  // 规范化座位号：按当前 priority 升序，重复时按原 index 顺序，依次分配 1/2/3/4
+  // 强制规范化：按当前 priority 升序排，依次分配 1/2/3/4
+  // 同时返回 players 数组本身顺序不变，只改 priority 值
   function normalizePriorities(players){
     if (!Array.isArray(players) || players.length === 0) return;
     var sorted = players.map(function(p, i){
-      return { p: p, i: i, prio: (typeof p.priority === "number" && p.priority > 0) ? p.priority : (i + 1) };
+      return { p: p, i: i, prio: (typeof p.priority === "number" && p.priority >= 1 && p.priority <= 4) ? p.priority : (i + 1) };
     }).sort(function(a, b){
       if (a.prio !== b.prio) return a.prio - b.prio;
       return a.i - b.i;
@@ -471,11 +460,24 @@ form.input.locked{opacity:.4;pointer-events:none}
     sorted.forEach(function(o, idx){ o.p.priority = idx + 1; });
   }
 
+  // 检查是否已经是合法的 1/2/3/4 排列
+  function isValidPriorities(players){
+    if (!Array.isArray(players) || players.length !== 4) return false;
+    var seen = {};
+    for (var i = 0; i < players.length; i++){
+      var p = players[i].priority;
+      if (p !== 1 && p !== 2 && p !== 3 && p !== 4) return false;
+      if (seen[p]) return false;
+      seen[p] = true;
+    }
+    return true;
+  }
+
   function load(){
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v9","mahjong_scoreboard_v8","mahjong_scoreboard_v7"];
+        var keys = ["mahjong_scoreboard_v10","mahjong_scoreboard_v9","mahjong_scoreboard_v8"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -483,7 +485,9 @@ form.input.locked{opacity:.4;pointer-events:none}
               var old = JSON.parse(oldRaw);
               if (old.settings && old.records){
                 normalizeSettings(old.settings);
-                normalizePriorities(old.settings.players);
+                if (!isValidPriorities(old.settings.players)){
+                  normalizePriorities(old.settings.players);
+                }
                 old.carryover = old.carryover || 0;
                 if (!old.current) old.current = { riichi: [false,false,false,false] };
                 old.gameEnded = false; old.endReason = "";
@@ -492,6 +496,12 @@ form.input.locked{opacity:.4;pointer-events:none}
                 old.dayEnded = false; old.daySummary = []; old.dayEndedAt = "";
                 if (typeof old.soundEnabled !== "boolean") old.soundEnabled = true;
                 if (!old.soundUrl || typeof old.soundUrl !== "string") old.soundUrl = DEFAULT_SOUND_URL;
+                // 检查记录里是否有异常 renchan（字符串 "true" 或非布尔），统一转成布尔
+                if (Array.isArray(old.records)){
+                  old.records.forEach(function(r){
+                    r.renchan = (r.renchan === true);
+                  });
+                }
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
                 return old;
@@ -506,7 +516,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       var data = JSON.parse(raw);
       if (!data.settings || !data.records) return JSON.parse(JSON.stringify(DEFAULT));
       normalizeSettings(data.settings);
-      normalizePriorities(data.settings.players);
+      if (!isValidPriorities(data.settings.players)){
+        normalizePriorities(data.settings.players);
+      }
       if (typeof data.carryover !== "number") data.carryover = 0;
       if (!data.current || !Array.isArray(data.current.riichi)){
         data.current = { riichi: [false,false,false,false] };
@@ -520,6 +532,12 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
       if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
       if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
+      // 修复记录里 renchan 类型异常
+      if (Array.isArray(data.records)){
+        data.records.forEach(function(r){
+          r.renchan = (r.renchan === true);
+        });
+      }
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
       return data;
@@ -560,7 +578,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 10, settings: state.settings, pts: c.pts, current: state.current,
+      v: 11, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
       settle: c.settle, onTable: c.onTable,
@@ -594,13 +612,13 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
-  // 关键算法：庄家 priority = ((currentRound - 1) % 4) + 1
-  // 每个玩家自风 = (windOffset + 相对庄家的距离) % 4
+  // 自风 = (场风偏移 + 离庄家顺时针距离) % 4
+  // 庄家 priority = ((currentRound - 1) % 4) + 1
+  // 每个玩家 priority 在 1-4 唯一
   function computeWinds(currentRound){
     var s = state.settings;
     var windOffset = Math.floor((currentRound - 1) / 4);
-    var posInRound = (currentRound - 1) % 4;
-    var dealerPriority = posInRound + 1;
+    var dealerPriority = ((currentRound - 1) % 4) + 1;
     return s.players.map(function(p){
       var d = (p.priority - dealerPriority + 4) % 4;
       return (windOffset + d) % 4;
@@ -681,11 +699,13 @@ form.input.locked{opacity:.4;pointer-events:none}
     var riichiCount = state.current.riichi.filter(Boolean).length;
     var onTable = state.carryover + riichiCount;
     var winds = computeWinds(currentRound);
+    var startIdx = -1;
+    s.players.forEach(function(p, i){ if (p.priority === 1) startIdx = i; });
     return {
       pts: pts, currentRound: currentRound, renchan: renchan,
       dealerPriority: dealerPriority, dealerIdx: dealerIdx,
       ranks: ranks, settle: settle, onTable: onTable, riichiCount: riichiCount,
-      winds: winds
+      winds: winds, startIdx: startIdx
     };
   }
 
@@ -747,28 +767,38 @@ form.input.locked{opacity:.4;pointer-events:none}
     return '<span class="wind-badge wind-' + WINDS_EN[windIdx] + '">' + WINDS_CN[windIdx] + '</span>';
   }
 
+  // 显示"本局是否会连庄"（只读，防止用户误解）
   function syncRenchanFromWinner(){
     var c = compute();
     var chk = document.getElementById("renchanChk");
     var label = document.getElementById("renchanLabel");
     var tag = document.getElementById("renchanAutoTag");
-    var autoValue = false;
-    var canAuto = false;
+    var willRenchan = false;
+    var canCompute = false;
 
     if (currentMode === "draw"){
-      if (c.dealerIdx >= 0){ autoValue = tenpai[c.dealerIdx] === true; canAuto = true; }
+      if (c.dealerIdx >= 0){
+        willRenchan = tenpai[c.dealerIdx] === true;
+        canCompute = true;
+      }
     } else if (selectedWinners.length > 0){
-      autoValue = selectedWinners.some(function(w){ return w.idx === c.dealerIdx; });
-      canAuto = true;
+      willRenchan = selectedWinners.some(function(w){ return w.idx === c.dealerIdx; });
+      canCompute = true;
     }
 
-    if (canAuto){
-      chk.checked = autoValue;
-      renchanAuto = true;
-      label.classList.add("auto");
-      tag.style.display = "inline";
+    if (canCompute){
+      chk.checked = willRenchan;
+      if (willRenchan){
+        label.classList.add("auto");
+        tag.style.display = "inline";
+        tag.textContent = "本局连庄";
+      } else {
+        label.classList.remove("auto");
+        tag.style.display = "inline";
+        tag.textContent = "本局下庄";
+        tag.style.color = "#fca5a5";
+      }
     } else {
-      renchanAuto = false;
       label.classList.remove("auto");
       tag.style.display = "none";
     }
@@ -885,6 +915,10 @@ form.input.locked{opacity:.4;pointer-events:none}
   }
 
   function render(){
+    // 每次 render 前重新检查并修正 priority
+    if (!isValidPriorities(state.settings.players)){
+      normalizePriorities(state.settings.players);
+    }
     var c = compute();
     var s = state.settings;
 
@@ -893,6 +927,9 @@ form.input.locked{opacity:.4;pointer-events:none}
     document.getElementById("renchanBonus").textContent =
       c.renchan > 0 ? "（+" + (RENCHAN_BONUS * c.renchan) + "）" : "";
     document.getElementById("onTable").textContent = c.onTable;
+
+    document.getElementById("startPlayerName").textContent =
+      c.startIdx >= 0 ? s.players[c.startIdx].name : "-";
 
     var totalCheck = c.pts.reduce(function(a,b){ return a+b; }, 0) + c.onTable * RIICHI_VALUE;
     var totalEl = document.getElementById("total");
@@ -1098,7 +1135,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
-    renchanAuto = false; lastFocusedWinnerIdx = -1;
+    lastFocusedWinnerIdx = -1;
     document.getElementById("note").value = "";
     document.getElementById("renchanChk").checked = false;
     document.getElementById("renchanLabel").classList.remove("auto");
@@ -1150,14 +1187,14 @@ form.input.locked{opacity:.4;pointer-events:none}
   }
 
   function startNewDay(){
-    if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先点“导出”备份数据。")) return;
+    if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先点"导出"备份数据。")) return;
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
     state.history = []; state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
-    renchanAuto = false; lastFocusedWinnerIdx = -1;
+    lastFocusedWinnerIdx = -1;
     document.getElementById("note").value = "";
     document.getElementById("renchanChk").checked = false;
     document.getElementById("renchanLabel").classList.remove("auto");
@@ -1433,16 +1470,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     updatePreview();
   });
 
-  document.getElementById("renchanChk").addEventListener("change", function(){
-    var label = document.getElementById("renchanLabel");
-    var tag = document.getElementById("renchanAutoTag");
-    if (renchanAuto){
-      label.classList.remove("auto");
-      tag.style.display = "none";
-      renchanAuto = false;
-    }
-  });
-
   document.getElementById("hanQuick").addEventListener("click", function(e){
     var btn = e.target.closest("button[data-han]");
     if (!btn) return;
@@ -1476,8 +1503,8 @@ form.input.locked{opacity:.4;pointer-events:none}
 
   document.getElementById("form").addEventListener("submit", function(e){
     e.preventDefault();
-    if (state.dayEnded){ alert("今日已完场，请点“开新一天”后再继续"); return; }
-    if (state.gameEnded){ alert("比赛已结束，请点“开新一场”或撤销后再继续"); return; }
+    if (state.dayEnded){ alert("今日已完场，请点"开新一天"后再继续"); return; }
+    if (state.gameEnded){ alert("比赛已结束，请点"开新一场"或撤销后再继续"); return; }
     var pv = computePreview();
     var changes = pv.changes;
     var riichiCount = state.current.riichi.filter(Boolean).length;
@@ -1491,11 +1518,17 @@ form.input.locked{opacity:.4;pointer-events:none}
       winnersForRecord = selectedWinners.slice();
     }
 
-    var renchan = document.getElementById("renchanChk").checked;
+    // 【关键修复】根据日麻规则强制计算 renchan，不信任 checkbox
+    var renchan;
+    if (currentMode === "draw"){
+      renchan = c.dealerIdx >= 0 && tenpai[c.dealerIdx] === true;
+    } else {
+      renchan = winnersForRecord.some(function(w){ return w.idx === c.dealerIdx; });
+    }
 
     var sim = null;
-    if (c.currentRound === 8 && currentMode !== "draw" &&
-        selectedWinners.some(function(w){ return w.idx === c.dealerIdx; })){
+    if (c.currentRound === 8 && currentMode !== "draw" && renchan){
+      // 南4局庄家和牌：按规则判断是否强制结束
       sim = simulateAfter(changes);
       if (sim.ranks[c.dealerIdx] === 1) renchan = false;
       else renchan = true;
@@ -1526,15 +1559,10 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (flown >= 0){
       state.gameEnded = true;
       state.endReason = s.players[flown].name + " 被飞";
-    } else if (c.currentRound === 8 && currentMode !== "draw" &&
-               selectedWinners.some(function(w){ return w.idx === c.dealerIdx; })){
-      if (sim && sim.ranks[c.dealerIdx] === 1){
-        state.gameEnded = true;
-        state.endReason = "南4局庄家第一，终局";
-      }
+    } else if (c.currentRound === 8 && currentMode !== "draw" && renchan === false && sim && sim.ranks[c.dealerIdx] === 1){
+      state.gameEnded = true;
+      state.endReason = "南4局庄家第一，终局";
     } else if (c.currentRound === 8 && !renchan){
-      // 只有非连庄（下庄）时才检查是否有人达到门槛
-      // 庄家听牌流局连庄时，即使有人达到门槛也不结束
       var allBelow = nc.pts.every(function(p){ return p < s.westGate; });
       if (!allBelow){
         state.gameEnded = true;
@@ -1554,7 +1582,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
-    renchanAuto = false; lastFocusedWinnerIdx = -1;
+    lastFocusedWinnerIdx = -1;
     document.getElementById("renchanChk").checked = false;
     document.getElementById("renchanLabel").classList.remove("auto");
     document.getElementById("renchanAutoTag").style.display = "none";
@@ -1566,7 +1594,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   });
 
   document.getElementById("btnUndo").addEventListener("click", function(){
-    if (state.dayEnded){ alert("今日已完场，请先点“开新一天”"); return; }
+    if (state.dayEnded){ alert("今日已完场，请先点"开新一天""); return; }
     if (state.records.length === 0) return;
     var wasSaved = state.matchSaved && state.history && state.history.length > 0;
     var msg = wasSaved ? "撤销最后一局？已保存的战绩也会被移除。" : "撤销最后一局？";
@@ -1631,7 +1659,9 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (!data.settings || !data.records) throw new Error("格式不对");
           if (!confirm("导入会覆盖当前数据，继续？")) return;
           normalizeSettings(data.settings);
-          normalizePriorities(data.settings.players);
+          if (!isValidPriorities(data.settings.players)){
+            normalizePriorities(data.settings.players);
+          }
           if (typeof data.carryover !== "number") data.carryover = 0;
           if (!data.current) data.current = { riichi: [false,false,false,false] };
           if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
@@ -1643,6 +1673,9 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
           if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
           if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
+          if (Array.isArray(data.records)){
+            data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
+          }
           state = data;
           Sound.setEnabled(state.soundEnabled);
           Sound.setUrl(state.soundUrl);
@@ -1676,13 +1709,18 @@ form.input.locked{opacity:.4;pointer-events:none}
     s.players.forEach(function(p, i){
       var block = document.createElement("div");
       block.className = "player-settings-block";
-      var seatLabel = p.priority === 1 ? "座位号（起家）" : "座位号";
+      var seatVal = (typeof p.priority === "number" && p.priority >= 1 && p.priority <= 4) ? p.priority : (i+1);
       block.innerHTML =
         '<div class="grid2">' +
           '<div class="field"><label>玩家' + (i+1) + '名</label>' +
           '<input type="text" data-pname="' + i + '" value="' + escapeHtml(p.name) + '"></div>' +
-          '<div class="field"><label>' + seatLabel + '</label>' +
-          '<input type="number" data-pprio="' + i + '" value="' + p.priority + '" min="1" max="4"></div>' +
+          '<div class="field"><label>座位</label>' +
+          '<select data-pprio="' + i + '">' +
+            '<option value="1"' + (seatVal === 1 ? ' selected' : '') + '>1（起家）</option>' +
+            '<option value="2"' + (seatVal === 2 ? ' selected' : '') + '>2（起家下家）</option>' +
+            '<option value="3"' + (seatVal === 3 ? ' selected' : '') + '>3（再下家）</option>' +
+            '<option value="4"' + (seatVal === 4 ? ' selected' : '') + '>4（起家上家）</option>' +
+          '</select></div>' +
         '</div>' +
         '<div class="field" style="margin-bottom:0"><label>头像（emoji 或图片 URL）</label>' +
         '<input type="text" data-pavatar="' + i + '" value="' + escapeHtml(p.avatar || "") + '" placeholder="例如 🐱 或 https://...">' +
@@ -1748,9 +1786,10 @@ form.input.locked{opacity:.4;pointer-events:none}
     });
     document.querySelectorAll("[data-pprio]").forEach(function(inp){
       var i = Number(inp.getAttribute("data-pprio"));
-      s.players[i].priority = Number(inp.value) || (i+1);
+      var v = Number(inp.value);
+      if (v >= 1 && v <= 4) s.players[i].priority = v;
     });
-    // 保存时规范化座位号为 1/2/3/4，防止重复导致庄家/风位错乱
+    // 强制规范化（防止用户选了重复座位）
     normalizePriorities(s.players);
     document.querySelectorAll("[data-pavatar]").forEach(function(inp){
       var i = Number(inp.getAttribute("data-pavatar"));
@@ -1764,7 +1803,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     recheckGameEnd();
     maybeSaveMatch();
     save(); render();
-    // 重开设置面板，让用户看到规范化后的座位号
     openSettings();
     modal.classList.remove("open");
     setSync(ROOM ? "pending" : "idle");

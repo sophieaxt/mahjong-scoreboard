@@ -140,7 +140,8 @@ form.input.locked{opacity:.4;pointer-events:none}
 .sound-toggle{display:flex;align-items:center;gap:8px;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;cursor:pointer}
 .sound-toggle input{width:20px;height:20px;margin:0}
 .sound-toggle span{font-size:14px;color:var(--text)}
-.btn-test-sound{width:100%;margin-top:8px;padding:10px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px}
+.sound-btn-row{display:flex;gap:6px;margin-top:8px}
+.sound-btn-row button{flex:1;padding:10px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px}
 .history-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.02)}
 .history-item .hi-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
 .history-item .hi-reason{color:#fca5a5;font-weight:700;font-size:11px}
@@ -295,9 +296,12 @@ form.input.locked{opacity:.4;pointer-events:none}
       <div class="field" style="margin-top:8px;margin-bottom:0">
         <label>音效文件 URL（mp3/ogg/wav/m4a）</label>
         <input type="url" id="setSoundUrl" placeholder="https://.../riichi.mp3">
-        <div class="hint">把音效文件上传到你的 GitHub 仓库（或其他支持外链的静态托管），然后把 raw 或 CDN 链接粘贴到这里。留空则播放无声。</div>
+        <div class="hint">默认使用雀魂立直音效。留空则不播放。</div>
       </div>
-      <button type="button" id="btnTestSound" class="btn-test-sound">测试立直音效</button>
+      <div class="sound-btn-row">
+        <button type="button" id="btnTestSound">测试</button>
+        <button type="button" id="btnResetSound">恢复默认</button>
+      </div>
     </div>
 
     <div class="grid2">
@@ -331,13 +335,15 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v9";
+  var STORAGE_KEY = "mahjong_scoreboard_v10";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
   var RENCHAN_BONUS = 3;
   var WINDS_CN = ["东", "南", "西", "北"];
   var WINDS_EN = ["E", "S", "W", "N"];
+
+  var DEFAULT_SOUND_URL = "https://files.riichi.moe/mjg/game%20resources%20and%20tools/Mahjong%20Soul/unity_raw/extracted/MyAssets/audio/sound/bantianyinshi/act_rich.mp3";
 
   var RON_NON_DEALER = [4, 8, 16, 32, 48, 64, 96, 128];
   var RON_DEALER     = [6, 12, 24, 48, 72, 96, 144, 192];
@@ -382,24 +388,26 @@ form.input.locked{opacity:.4;pointer-events:none}
       } catch(e){}
     }
 
-    function test(){
-      play();
-    }
-
     return {
       setEnabled: function(v){ enabled = !!v; },
       setUrl: setUrl,
       play: play,
-      test: test,
       unlock: function(){
-        // iOS/Safari 需要用户手势才能播放音频，这里静默播放一次 0 音量
         if (!unlocked){
           unlocked = true;
           var el = initAudio();
           if (el){
-            try { el.volume = 0; el.play().then(function(){
-              el.pause(); el.currentTime = 0; el.volume = 1;
-            }).catch(function(){ el.volume = 1; }); } catch(e){}
+            try {
+              var oldVol = el.volume;
+              el.volume = 0;
+              var p = el.play();
+              if (p && p.then){
+                p.then(function(){ el.pause(); el.currentTime = 0; el.volume = oldVol; })
+                 .catch(function(){ el.volume = oldVol; });
+              } else {
+                el.pause(); el.currentTime = 0; el.volume = oldVol;
+              }
+            } catch(e){}
           }
         }
       }
@@ -423,7 +431,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     history: [], matchSaved: false,
     dayEnded: false, daySummary: [], dayEndedAt: "",
     soundEnabled: true,
-    soundUrl: ""
+    soundUrl: DEFAULT_SOUND_URL
   };
 
   var state = load();
@@ -451,7 +459,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v8","mahjong_scoreboard_v7","mahjong_scoreboard_v6"];
+        var keys = ["mahjong_scoreboard_v9","mahjong_scoreboard_v8","mahjong_scoreboard_v7"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -466,7 +474,8 @@ form.input.locked{opacity:.4;pointer-events:none}
                 old.matchSaved = false;
                 old.dayEnded = false; old.daySummary = []; old.dayEndedAt = "";
                 if (typeof old.soundEnabled !== "boolean") old.soundEnabled = true;
-                if (typeof old.soundUrl !== "string") old.soundUrl = "";
+                // 旧数据 soundUrl 为空时自动填入默认链接
+                if (!old.soundUrl || typeof old.soundUrl !== "string") old.soundUrl = DEFAULT_SOUND_URL;
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
                 return old;
@@ -475,6 +484,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           }
         }
         Sound.setEnabled(true);
+        Sound.setUrl(DEFAULT_SOUND_URL);
         return JSON.parse(JSON.stringify(DEFAULT));
       }
       var data = JSON.parse(raw);
@@ -492,12 +502,14 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (!Array.isArray(data.daySummary)) data.daySummary = [];
       if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
       if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
-      if (typeof data.soundUrl !== "string") data.soundUrl = "";
+      // 兼容旧数据：soundUrl 为空时填默认链接
+      if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
       return data;
     } catch(e){
       Sound.setEnabled(true);
+      Sound.setUrl(DEFAULT_SOUND_URL);
       return JSON.parse(JSON.stringify(DEFAULT));
     }
   }
@@ -532,7 +544,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 9, settings: state.settings, pts: c.pts, current: state.current,
+      v: 10, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
       settle: c.settle, onTable: c.onTable,
@@ -566,11 +578,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
-  // 计算每个玩家的自风（0=东 1=南 2=西 3=北）
-  // windOffset = 场风（0=东场 1=南场 2=西场 3=北场）
-  // dealerPriority = 当前庄家的 priority
-  // 玩家离庄家的距离 d = (playerPriority - dealerPriority + 4) % 4
-  // 自风索引 = (windOffset + d) % 4
   function computeWinds(currentRound){
     var s = state.settings;
     var windOffset = Math.floor((currentRound - 1) / 4);
@@ -1569,7 +1576,14 @@ form.input.locked{opacity:.4;pointer-events:none}
     var url = document.getElementById("setSoundUrl").value.trim();
     if (!url){ alert("请先填写音效文件 URL"); return; }
     Sound.setUrl(url);
-    Sound.test();
+    Sound.unlock();
+    Sound.play();
+  });
+
+  document.getElementById("btnResetSound").addEventListener("click", function(){
+    document.getElementById("setSoundUrl").value = DEFAULT_SOUND_URL;
+    Sound.setUrl(DEFAULT_SOUND_URL);
+    Sound.play();
   });
 
   document.getElementById("btnExport").addEventListener("click", function(){
@@ -1607,7 +1621,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (!Array.isArray(data.daySummary)) data.daySummary = [];
           if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
           if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
-          if (typeof data.soundUrl !== "string") data.soundUrl = "";
+          if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
           state = data;
           Sound.setEnabled(state.soundEnabled);
           Sound.setUrl(state.soundUrl);
@@ -1627,7 +1641,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     var s = state.settings;
     document.getElementById("setRoom").value = ROOM || "";
     document.getElementById("setSoundEnabled").checked = state.soundEnabled !== false;
-    document.getElementById("setSoundUrl").value = state.soundUrl || "";
+    document.getElementById("setSoundUrl").value = state.soundUrl || DEFAULT_SOUND_URL;
     document.getElementById("setStart").value = s.startPoints;
     document.getElementById("setRatio").value = s.ratio;
     document.getElementById("setHeadPrize").value = s.headPrize;
@@ -1731,7 +1745,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     schedulePublish();
   });
 
-  // 首次点击解锁音频（iOS 需要）
   document.addEventListener("click", function once(){
     Sound.unlock();
     document.removeEventListener("click", once);

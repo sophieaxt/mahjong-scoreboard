@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>日麻记分牌</title>
+<title>日麻记分牌 v12</title>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#f59e0b;--green:#22c55e;--red:#ef4444;--riichi:#ef4444;--gold:#fbbf24}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -17,6 +17,7 @@ select{background:var(--card);border:1px solid var(--line);color:var(--text);bor
 header{position:sticky;top:0;z-index:10;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--line)}
 .title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .title{font-size:17px;font-weight:700}
+.title .ver{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
 .sync{font-size:12px;padding:4px 8px;border-radius:8px;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--muted)}
 .sync.ok{color:var(--green);border-color:#14532d;background:#052e16}
 .sync.err{color:var(--red);border-color:#7f1d1d;background:#2a0a0a}
@@ -144,6 +145,8 @@ form.input.locked{opacity:.4;pointer-events:none}
 .sound-toggle span{font-size:14px;color:var(--text)}
 .sound-btn-row{display:flex;gap:6px;margin-top:8px}
 .sound-btn-row button{flex:1;padding:10px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px}
+.wind-preview{background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:10px;margin-top:6px;font-size:13px;line-height:1.8;color:#22d3ee;font-weight:600}
+.wind-flip-btn{width:100%;margin-top:6px;padding:10px;font-size:13px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.5);color:#22d3ee;border-radius:10px;font-weight:700}
 .history-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.02)}
 .history-item .hi-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
 .history-item .hi-reason{color:#fca5a5;font-weight:700;font-size:11px}
@@ -169,7 +172,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
 <header>
   <div class="title-row">
-    <div class="title">日麻记分牌</div>
+    <div class="title">日麻记分牌<span class="ver">v12</span></div>
     <div class="sync idle" id="syncStatus">● 未同步</div>
   </div>
   <div class="info">
@@ -307,6 +310,13 @@ form.input.locked{opacity:.4;pointer-events:none}
       </div>
     </div>
 
+    <div class="field">
+      <label>座位方向</label>
+      <div class="hint">东1局自风预览，看下面是否符合你的期望（庄=东、庄下家=南、再下家=西、庄上家=北）：</div>
+      <div class="wind-preview" id="windPreview">—</div>
+      <button type="button" id="btnFlipSeatDir" class="wind-flip-btn">方向不符？点此切换</button>
+    </div>
+
     <div class="grid2">
       <div class="field"><label>起始点数</label><input type="number" id="setStart"></div>
       <div class="field"><label>换算比率</label><input type="number" step="0.01" id="setRatio"></div>
@@ -326,7 +336,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。</div>
 
     <div class="hint" style="margin-bottom:8px;color:#22d3ee">
-      座位说明：1=起家（东1局庄家）、2=起家下家、3=再下家、4=起家上家。保存时自动整理为 1/2/3/4，不会重复。
+      座位说明：1=起家（东1局庄家）、2=起家下家、3=再下家、4=起家上家。保存时自动整理为 1/2/3/4。
     </div>
 
     <div id="playerFields"></div>
@@ -342,7 +352,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v11";
+  var STORAGE_KEY = "mahjong_scoreboard_v12";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -361,10 +371,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
 
   var Sound = (function(){
-    var enabled = true;
-    var audioUrl = "";
-    var audioEl = null;
-    var unlocked = false;
+    var enabled = true, audioUrl = "", audioEl = null, unlocked = false;
     function initAudio(){
       if (!audioUrl) return null;
       if (!audioEl){
@@ -375,8 +382,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     function setUrl(url){ audioUrl = (url || "").trim(); audioEl = null; }
     function play(){
       if (!enabled || !audioUrl) return;
-      var el = initAudio();
-      if (!el) return;
+      var el = initAudio(); if (!el) return;
       try {
         el.currentTime = 0;
         var p = el.play();
@@ -411,6 +417,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     settings: {
       startPoints: 100, ratio: 1, headPrize: 10,
       rankPrize: [15, 5, -5, -15], westGate: 110,
+      seatDirection: "down",
       players: [
         { name: "玩家1", priority: 1, avatar: "" },
         { name: "玩家2", priority: 2, avatar: "" },
@@ -443,12 +450,11 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (typeof s.headPrize !== "number") s.headPrize = 10;
     if (!Array.isArray(s.rankPrize)) s.rankPrize = [15, 5, -5, -15];
     if (typeof s.westGate !== "number") s.westGate = 110;
+    if (s.seatDirection !== "up") s.seatDirection = "down";
     if (!Array.isArray(s.players)) return;
     s.players.forEach(function(p){ if (typeof p.avatar !== "string") p.avatar = ""; });
   }
 
-  // 强制规范化：按当前 priority 升序排，依次分配 1/2/3/4
-  // 同时返回 players 数组本身顺序不变，只改 priority 值
   function normalizePriorities(players){
     if (!Array.isArray(players) || players.length === 0) return;
     var sorted = players.map(function(p, i){
@@ -460,7 +466,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     sorted.forEach(function(o, idx){ o.p.priority = idx + 1; });
   }
 
-  // 检查是否已经是合法的 1/2/3/4 排列
   function isValidPriorities(players){
     if (!Array.isArray(players) || players.length !== 4) return false;
     var seen = {};
@@ -477,7 +482,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v10","mahjong_scoreboard_v9","mahjong_scoreboard_v8"];
+        var keys = ["mahjong_scoreboard_v11","mahjong_scoreboard_v10","mahjong_scoreboard_v9"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -485,9 +490,7 @@ form.input.locked{opacity:.4;pointer-events:none}
               var old = JSON.parse(oldRaw);
               if (old.settings && old.records){
                 normalizeSettings(old.settings);
-                if (!isValidPriorities(old.settings.players)){
-                  normalizePriorities(old.settings.players);
-                }
+                if (!isValidPriorities(old.settings.players)) normalizePriorities(old.settings.players);
                 old.carryover = old.carryover || 0;
                 if (!old.current) old.current = { riichi: [false,false,false,false] };
                 old.gameEnded = false; old.endReason = "";
@@ -496,12 +499,7 @@ form.input.locked{opacity:.4;pointer-events:none}
                 old.dayEnded = false; old.daySummary = []; old.dayEndedAt = "";
                 if (typeof old.soundEnabled !== "boolean") old.soundEnabled = true;
                 if (!old.soundUrl || typeof old.soundUrl !== "string") old.soundUrl = DEFAULT_SOUND_URL;
-                // 检查记录里是否有异常 renchan（字符串 "true" 或非布尔），统一转成布尔
-                if (Array.isArray(old.records)){
-                  old.records.forEach(function(r){
-                    r.renchan = (r.renchan === true);
-                  });
-                }
+                if (Array.isArray(old.records)) old.records.forEach(function(r){ r.renchan = (r.renchan === true); });
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
                 return old;
@@ -516,13 +514,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       var data = JSON.parse(raw);
       if (!data.settings || !data.records) return JSON.parse(JSON.stringify(DEFAULT));
       normalizeSettings(data.settings);
-      if (!isValidPriorities(data.settings.players)){
-        normalizePriorities(data.settings.players);
-      }
+      if (!isValidPriorities(data.settings.players)) normalizePriorities(data.settings.players);
       if (typeof data.carryover !== "number") data.carryover = 0;
-      if (!data.current || !Array.isArray(data.current.riichi)){
-        data.current = { riichi: [false,false,false,false] };
-      }
+      if (!data.current || !Array.isArray(data.current.riichi)) data.current = { riichi: [false,false,false,false] };
       if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
       if (typeof data.endReason !== "string") data.endReason = "";
       if (!Array.isArray(data.history)) data.history = [];
@@ -532,12 +526,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
       if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
       if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
-      // 修复记录里 renchan 类型异常
-      if (Array.isArray(data.records)){
-        data.records.forEach(function(r){
-          r.renchan = (r.renchan === true);
-        });
-      }
+      if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
       return data;
@@ -578,7 +567,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 11, settings: state.settings, pts: c.pts, current: state.current,
+      v: 12, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
       settle: c.settle, onTable: c.onTable,
@@ -612,17 +601,64 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
-  // 自风 = (场风偏移 + 离庄家顺时针距离) % 4
-  // 庄家 priority = ((currentRound - 1) % 4) + 1
-  // 每个玩家 priority 在 1-4 唯一
+  // 【核心修复】自风计算：基于打牌顺序数组，绝对正确
+  // 
+  // 定义：
+  //   seatOrder = 按 priority 升序排列的玩家数组
+  //   seatOrder[0] = priority 1 = 起家
+  //   seatOrder[1] = priority 2 = 起家下家（打牌方向的下一个）
+  //   seatOrder[2] = priority 3 = 起家再下家
+  //   seatOrder[3] = priority 4 = 起家上家
+  //
+  //   打牌顺序：起家(东) → 起家下家(南) → 再下家(西) → 上家(北) → 起家(东)...
+  //
+  // 计算：
+  //   第 currentRound 局，庄家在打牌顺序中的位置 = ((currentRound - 1) % 4)
+  //   场风偏移 windOffset = floor((currentRound - 1) / 4)  （0=东场, 1=南场, 2=西场, 3=北场）
+  //   对每个玩家：
+  //     pos = 该玩家在 seatOrder 中的位置（0-3）
+  //     d = (pos - dealerPos + 4) % 4  （相对庄家的顺时针步数，0=庄自己, 1=下家, 2=再下家, 3=上家）
+  //     自风 = (windOffset + d) % 4
+  //
+  // 方向 seatDirection：
+  //   "down"：priority 1→2→3→4 是打牌方向（默认，符合"2=起家下家"的 UI 语义）
+  //   "up"  ：priority 1→2→3→4 是反打牌方向（兼容用户按相反方向填座位的情况）
   function computeWinds(currentRound){
     var s = state.settings;
+    var players = s.players;
+    if (!Array.isArray(players) || players.length !== 4) return [0,0,0,0];
+
+    // 1. 按 priority 1,2,3,4 找每个座位上对应的玩家 index
+    var seatOrder = [];  // seatOrder[k] = priority (k+1) 的玩家在 players 数组中的 index
+    for (var k = 1; k <= 4; k++){
+      var found = -1;
+      for (var i = 0; i < 4; i++){
+        if (players[i].priority === k){ found = i; break; }
+      }
+      if (found < 0) return [0,0,0,0];
+      seatOrder.push(found);
+    }
+
+    // 2. 场风偏移和庄家位置
     var windOffset = Math.floor((currentRound - 1) / 4);
-    var dealerPriority = ((currentRound - 1) % 4) + 1;
-    return s.players.map(function(p){
-      var d = (p.priority - dealerPriority + 4) % 4;
-      return (windOffset + d) % 4;
-    });
+    var dealerSeatPos = (currentRound - 1) % 4;  // 庄家在 seatOrder 中的位置（0-3）
+
+    // 3. 方向
+    var dirDown = (s.seatDirection !== "up");
+
+    // 4. 计算每个玩家的自风
+    var winds = [0,0,0,0];
+    for (var k2 = 0; k2 < 4; k2++){
+      var playerIdx = seatOrder[k2];
+      var d;
+      if (dirDown){
+        d = (k2 - dealerSeatPos + 4) % 4;
+      } else {
+        d = (dealerSeatPos - k2 + 4) % 4;
+      }
+      winds[playerIdx] = (windOffset + d) % 4;
+    }
+    return winds;
   }
 
   function getRenchanCount(){
@@ -767,7 +803,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     return '<span class="wind-badge wind-' + WINDS_EN[windIdx] + '">' + WINDS_CN[windIdx] + '</span>';
   }
 
-  // 显示"本局是否会连庄"（只读，防止用户误解）
   function syncRenchanFromWinner(){
     var c = compute();
     var chk = document.getElementById("renchanChk");
@@ -777,10 +812,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     var canCompute = false;
 
     if (currentMode === "draw"){
-      if (c.dealerIdx >= 0){
-        willRenchan = tenpai[c.dealerIdx] === true;
-        canCompute = true;
-      }
+      if (c.dealerIdx >= 0){ willRenchan = tenpai[c.dealerIdx] === true; canCompute = true; }
     } else if (selectedWinners.length > 0){
       willRenchan = selectedWinners.some(function(w){ return w.idx === c.dealerIdx; });
       canCompute = true;
@@ -792,6 +824,7 @@ form.input.locked{opacity:.4;pointer-events:none}
         label.classList.add("auto");
         tag.style.display = "inline";
         tag.textContent = "本局连庄";
+        tag.style.color = "#86efac";
       } else {
         label.classList.remove("auto");
         tag.style.display = "inline";
@@ -915,7 +948,6 @@ form.input.locked{opacity:.4;pointer-events:none}
   }
 
   function render(){
-    // 每次 render 前重新检查并修正 priority
     if (!isValidPriorities(state.settings.players)){
       normalizePriorities(state.settings.players);
     }
@@ -1233,9 +1265,7 @@ form.input.locked{opacity:.4;pointer-events:none}
         var settleCls = sm.totalSettle > 0 ? "pos" : (sm.totalSettle < 0 ? "neg" : "");
         var sign = sm.totalSettle > 0 ? "+" : "";
         var stats = sm.matches + "场";
-        if (sm.matches > 0){
-          stats += " · " + sm.ranks[0] + "/" + sm.ranks[1] + "/" + sm.ranks[2] + "/" + sm.ranks[3];
-        }
+        if (sm.matches > 0) stats += " · " + sm.ranks[0] + "/" + sm.ranks[1] + "/" + sm.ranks[2] + "/" + sm.ranks[3];
         div.innerHTML =
           '<div class="ds-rank">' + sm.rank + '</div>' +
           '<div class="ds-info">' +
@@ -1261,9 +1291,7 @@ form.input.locked{opacity:.4;pointer-events:none}
         div.className = "history-item";
         var head = '<div class="hi-head"><span>' + escapeHtml(formatMatchTime(m.endedAt)) +
           '</span><span class="hi-reason">' + escapeHtml(m.reason) + '</span></div>';
-        var playersHtml = (m.players || []).slice().sort(function(a, b){
-          return a.rank - b.rank;
-        }).map(function(p){
+        var playersHtml = (m.players || []).slice().sort(function(a, b){ return a.rank - b.rank; }).map(function(p){
           var cls = p.rank === 1 ? "hi-rank1" : "";
           var settleCls = p.settle > 0 ? "hi-settle-pos" : "hi-settle-neg";
           var sign = p.settle > 0 ? "+" : "";
@@ -1387,13 +1415,22 @@ form.input.locked{opacity:.4;pointer-events:none}
     el.innerHTML = html || '<span class="pv-tag">选择赢家、放铳者和翻数后显示预览</span>';
   }
 
+  function updateWindPreview(){
+    var el = document.getElementById("windPreview");
+    if (!el) return;
+    var winds = computeWinds(1);
+    var s = state.settings;
+    var parts = s.players.map(function(p, i){
+      return escapeHtml(p.name) + "=" + WINDS_CN[winds[i]];
+    });
+    el.textContent = "东1局：" + parts.join("，");
+  }
+
   document.getElementById("modeTabs").addEventListener("click", function(e){
     var btn = e.target.closest("button[data-mode]");
     if (!btn) return;
     currentMode = btn.getAttribute("data-mode");
-    if (currentMode === "tsumo" && selectedWinners.length > 1){
-      selectedWinners = [selectedWinners[0]];
-    }
+    if (currentMode === "tsumo" && selectedWinners.length > 1) selectedWinners = [selectedWinners[0]];
     document.querySelectorAll("#modeTabs button").forEach(function(b){
       b.className = b.getAttribute("data-mode") === currentMode ? "active" : "";
     });
@@ -1411,7 +1448,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     Sound.unlock();
     var idx = Number(btn.getAttribute("data-winner"));
     var existing = selectedWinners.findIndex(function(w){ return w.idx === idx; });
-
     if (currentMode === "tsumo"){
       if (existing >= 0) selectedWinners = [];
       else selectedWinners = [{ idx: idx, han: 0 }];
@@ -1423,13 +1459,8 @@ form.input.locked{opacity:.4;pointer-events:none}
       }
     }
     if (selectedWinners.length === 1) lastFocusedWinnerIdx = selectedWinners[0].idx;
-
-    renderWinnerBtns();
-    renderHanRows();
-    renderLoserBtns();
-    applyModeUI();
-    syncRenchanFromWinner();
-    updatePreview();
+    renderWinnerBtns(); renderHanRows(); renderLoserBtns();
+    applyModeUI(); syncRenchanFromWinner(); updatePreview();
   });
 
   document.getElementById("hanRows").addEventListener("input", function(e){
@@ -1446,9 +1477,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   });
 
   document.getElementById("hanRows").addEventListener("focusin", function(e){
-    if (e.target.hasAttribute("data-hidx")){
-      lastFocusedWinnerIdx = Number(e.target.getAttribute("data-hidx"));
-    }
+    if (e.target.hasAttribute("data-hidx")) lastFocusedWinnerIdx = Number(e.target.getAttribute("data-hidx"));
   });
 
   document.getElementById("loserBtns").addEventListener("click", function(e){
@@ -1518,7 +1547,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       winnersForRecord = selectedWinners.slice();
     }
 
-    // 【关键修复】根据日麻规则强制计算 renchan，不信任 checkbox
+    // 强制按规则计算 renchan
     var renchan;
     if (currentMode === "draw"){
       renchan = c.dealerIdx >= 0 && tenpai[c.dealerIdx] === true;
@@ -1528,7 +1557,6 @@ form.input.locked{opacity:.4;pointer-events:none}
 
     var sim = null;
     if (c.currentRound === 8 && currentMode !== "draw" && renchan){
-      // 南4局庄家和牌：按规则判断是否强制结束
       sim = simulateAfter(changes);
       if (sim.ranks[c.dealerIdx] === 1) renchan = false;
       else renchan = true;
@@ -1610,14 +1638,10 @@ form.input.locked{opacity:.4;pointer-events:none}
 
   document.getElementById("btnEndDay").addEventListener("click", endDay);
   document.getElementById("btnHistory").addEventListener("click", openHistory);
-  document.getElementById("btnCloseHistory").addEventListener("click", function(){
-    document.getElementById("historyModal").classList.remove("open");
-  });
+  document.getElementById("btnCloseHistory").addEventListener("click", function(){ document.getElementById("historyModal").classList.remove("open"); });
   document.getElementById("btnStartNewMatch").addEventListener("click", startNewMatch);
   document.getElementById("btnShowDaySummary").addEventListener("click", openDaySummary);
-  document.getElementById("btnCloseDaySummary").addEventListener("click", function(){
-    document.getElementById("daySummaryModal").classList.remove("open");
-  });
+  document.getElementById("btnCloseDaySummary").addEventListener("click", function(){ document.getElementById("daySummaryModal").classList.remove("open"); });
   document.getElementById("btnNewDayFromSummary").addEventListener("click", startNewDay);
 
   document.getElementById("btnTestSound").addEventListener("click", function(){
@@ -1627,7 +1651,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     Sound.unlock();
     Sound.play();
   });
-
   document.getElementById("btnResetSound").addEventListener("click", function(){
     document.getElementById("setSoundUrl").value = DEFAULT_SOUND_URL;
     Sound.setUrl(DEFAULT_SOUND_URL);
@@ -1659,9 +1682,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (!data.settings || !data.records) throw new Error("格式不对");
           if (!confirm("导入会覆盖当前数据，继续？")) return;
           normalizeSettings(data.settings);
-          if (!isValidPriorities(data.settings.players)){
-            normalizePriorities(data.settings.players);
-          }
+          if (!isValidPriorities(data.settings.players)) normalizePriorities(data.settings.players);
           if (typeof data.carryover !== "number") data.carryover = 0;
           if (!data.current) data.current = { riichi: [false,false,false,false] };
           if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
@@ -1673,9 +1694,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
           if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
           if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
-          if (Array.isArray(data.records)){
-            data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
-          }
+          if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
           state = data;
           Sound.setEnabled(state.soundEnabled);
           Sound.setUrl(state.soundUrl);
@@ -1731,19 +1750,22 @@ form.input.locked{opacity:.4;pointer-events:none}
         '</div>';
       pf.appendChild(block);
     });
+    updateWindPreview();
     modal.classList.add("open");
   }
 
   document.getElementById("btnSettings").addEventListener("click", openSettings);
   document.getElementById("syncStatus").addEventListener("click", openSettings);
 
-  document.getElementById("btnCancelSettings").addEventListener("click", function(){
-    modal.classList.remove("open");
+  document.getElementById("btnFlipSeatDir").addEventListener("click", function(){
+    state.settings.seatDirection = state.settings.seatDirection === "up" ? "down" : "up";
+    updateWindPreview();
+    save();
+    render();
   });
 
-  modal.addEventListener("click", function(e){
-    if (e.target === modal) modal.classList.remove("open");
-  });
+  document.getElementById("btnCancelSettings").addEventListener("click", function(){ modal.classList.remove("open"); });
+  modal.addEventListener("click", function(e){ if (e.target === modal) modal.classList.remove("open"); });
 
   modal.addEventListener("input", function(e){
     var t = e.target;
@@ -1757,6 +1779,29 @@ form.input.locked{opacity:.4;pointer-events:none}
         pvEl.style.background = avatarBg(fakePlayer, i);
         pvEl.innerHTML = avatarInner(fakePlayer, i);
       }
+    }
+  });
+
+  modal.addEventListener("change", function(e){
+    if (e.target.hasAttribute("data-pprio")){
+      // 用户改座位时，实时更新预览（不保存）
+      var newPlayers = state.settings.players.map(function(p, i){ return { name: p.name, priority: p.priority, avatar: p.avatar }; });
+      document.querySelectorAll("[data-pprio]").forEach(function(inp){
+        var i = Number(inp.getAttribute("data-pprio"));
+        newPlayers[i].priority = Number(inp.value) || (i+1);
+      });
+      document.querySelectorAll("[data-pname]").forEach(function(inp){
+        var i = Number(inp.getAttribute("data-pname"));
+        newPlayers[i].name = inp.value.trim() || ("玩家" + (i+1));
+      });
+      // 临时替换 settings.players 算预览
+      var orig = state.settings.players;
+      state.settings.players = newPlayers;
+      var winds = computeWinds(1);
+      state.settings.players = orig;
+      var el = document.getElementById("windPreview");
+      var parts = newPlayers.map(function(p, i){ return escapeHtml(p.name) + "=" + WINDS_CN[winds[i]]; });
+      el.textContent = "东1局：" + parts.join("，");
     }
   });
 
@@ -1789,7 +1834,6 @@ form.input.locked{opacity:.4;pointer-events:none}
       var v = Number(inp.value);
       if (v >= 1 && v <= 4) s.players[i].priority = v;
     });
-    // 强制规范化（防止用户选了重复座位）
     normalizePriorities(s.players);
     document.querySelectorAll("[data-pavatar]").forEach(function(inp){
       var i = Number(inp.getAttribute("data-pavatar"));

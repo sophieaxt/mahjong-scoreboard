@@ -5,92 +5,194 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>日麻记分牌 · 展示</title>
 <style>
-:root{--bg:#0a0e1a;--bg2:#162236;--card:#1a2236;--line:#2a3448;--text:#e8edf5;--muted:#8896ab;--accent:#f59e0b;--gold:#fbbf24;--green:#22c55e;--red:#ef4444;--riichi:#ef4444}
+:root{
+  --bg:#0a0e1a; --bg2:#162236; --card:#1a2236; --line:#2a3448;
+  --text:#e8edf5; --muted:#8896ab; --accent:#f59e0b; --gold:#fbbf24;
+  --green:#22c55e; --red:#ef4444; --riichi:#ef4444;
+  --wind-E:#dc2626; --wind-S:#2563eb; --wind-W:#16a34a; --wind-N:#7c3aed;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;background:radial-gradient(circle at top,var(--bg2) 0%,var(--bg) 70%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
-.wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding:2vh 2vw;gap:1.5vh}
-header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wrap:nowrap}
-.chip{background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(20,28,46,.95));border:1px solid var(--line);border-radius:1.2vh;padding:1vh 1.5vw;font-size:2.2vh;font-weight:500;color:var(--muted);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:baseline;gap:.5vw}
-.chip b{color:var(--text);font-size:2.8vh;font-weight:800;margin-left:.3vw}
-.chip.dealer{border-color:rgba(245,158,11,.5);background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95))}
-.chip.dealer b{color:var(--accent)}
-.chip.riichi-chip{border-color:rgba(239,68,68,.5)}
-.chip.riichi-chip b{color:var(--red)}
-.chip .bonus{font-size:1.5vh;color:var(--accent);margin-left:.3vw;font-weight:700}
-.end-banner{display:none;text-align:center;font-size:2.4vh;font-weight:800;padding:1.2vh 2vw;border-radius:1.2vh;background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;border:1px solid #dc2626;box-shadow:0 0 2vh rgba(239,68,68,.4)}
+html,body{
+  width:100%;height:100%;
+  background:radial-gradient(circle at top,var(--bg2) 0%,var(--bg) 70%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;
+  overflow:hidden;user-select:none;-webkit-user-select:none;
+}
+.wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;
+  padding:1.5vh 1.5vw;gap:1.2vh}
+
+/* ===== Header ===== */
+header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9vh}
+.chip{display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:1vh 1.6vw;border-radius:1.2vh;min-width:9vw;
+  background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(20,28,46,.95));
+  border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.chip .label{font-size:1.4vh;color:var(--muted);letter-spacing:.15vw;margin-bottom:.4vh;font-weight:500}
+.chip .value{font-size:3.2vh;font-weight:900;color:var(--text);line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip .value small{font-size:1.8vh;color:var(--accent);font-weight:800;margin-left:.4vw}
+.chip.dealer{border-color:rgba(245,158,11,.6);background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));box-shadow:0 2px 12px rgba(245,158,11,.25)}
+.chip.dealer .value{color:var(--accent)}
+.chip.riichi-chip{border-color:rgba(239,68,68,.5);background:linear-gradient(135deg,rgba(42,10,16,.95),rgba(28,8,12,.95))}
+.chip.riichi-chip .value{color:var(--red)}
+.chip.total-chip.warn .value{color:var(--red)}
+
+/* ===== End Banner ===== */
+.end-banner{display:none;text-align:center;font-size:2.4vh;font-weight:800;
+  padding:1.2vh 2vw;border-radius:1.2vh;letter-spacing:.15vw;
+  background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;
+  border:1px solid #dc2626;box-shadow:0 0 2vh rgba(239,68,68,.4)}
 .end-banner.show{display:block}
 
-/* 逆时针布局：pos = (wind + rotation) % 4
-   pos0=左上(pos0), pos1=左下(pos1), pos2=右下(pos2), pos3=右上(pos3) */
-.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5vh 1.5vw;min-height:0}
-.player{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.5vw;display:flex;flex-direction:column;justify-content:center;gap:1vh;overflow:hidden;transition:all .3s}
+/* ===== Player Grid ===== */
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.1vh 1.1vw;min-height:0}
+.player{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.2vw;display:flex;flex-direction:column;gap:1.2vh;overflow:hidden;transition:all .3s}
 .player.pos-0{grid-column:1;grid-row:1}
 .player.pos-1{grid-column:1;grid-row:2}
 .player.pos-2{grid-column:2;grid-row:2}
 .player.pos-3{grid-column:2;grid-row:1}
-.player.dealer{background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));border-color:rgba(245,158,11,.7);box-shadow:0 0 2vh rgba(245,158,11,.2),inset 0 0 2vh rgba(245,158,11,.05)}
-.player.riichi{background:linear-gradient(135deg,rgba(42,10,16,.95),rgba(30,8,12,.95));border-color:rgba(239,68,68,.7);box-shadow:0 0 2vh rgba(239,68,68,.2),inset 0 0 2vh rgba(239,68,68,.05)}
-.player.dealer.riichi{background:linear-gradient(135deg,rgba(58,26,24,.95),rgba(40,18,16,.95));border-color:rgba(245,158,11,.8);box-shadow:0 0 2vh rgba(245,158,11,.25),0 0 2vh rgba(239,68,68,.15)}
-.player .top-row{display:flex;align-items:center;gap:1.5vw}
-.player .avatar{width:8vh;height:8vh;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:4.5vh;font-weight:800;overflow:hidden;color:#fff;border:2px solid rgba(255,255,255,.15);box-shadow:0 2px 10px rgba(0,0,0,.4)}
-.player .avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.player.dealer .avatar{border-color:rgba(245,158,11,.85);box-shadow:0 0 1.5vh rgba(245,158,11,.5)}
-.player.riichi .avatar{border-color:rgba(239,68,68,.85);box-shadow:0 0 1.5vh rgba(239,68,68,.5)}
-.player .name{font-size:3vh;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player.dealer{background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));border-color:rgba(245,158,11,.8);box-shadow:0 0 2.5vh rgba(245,158,11,.25),inset 0 0 2vh rgba(245,158,11,.05)}
+.player.riichi{background:linear-gradient(135deg,rgba(42,10,16,.95),rgba(30,8,12,.95));border-color:var(--red);box-shadow:0 0 2.5vh rgba(239,68,68,.35),inset 0 0 2vh rgba(239,68,68,.08);animation:riichi-pulse 2.4s ease-in-out infinite}
+@keyframes riichi-pulse{
+  0%,100%{box-shadow:0 0 2.5vh rgba(239,68,68,.35),inset 0 0 2vh rgba(239,68,68,.08)}
+  50%{box-shadow:0 0 4vh rgba(239,68,68,.6),inset 0 0 2.5vh rgba(239,68,68,.12)}
+}
+.player.riichi::before{content:"";position:absolute;top:0;left:0;right:0;height:.8vh;background:linear-gradient(90deg,transparent,var(--red),transparent);box-shadow:0 0 2vh var(--red)}
+.player.dealer.riichi{background:linear-gradient(135deg,rgba(58,26,24,.95),rgba(40,18,16,.95));border-color:rgba(245,158,11,.9);box-shadow:0 0 2.5vh rgba(245,158,11,.4),0 0 4vh rgba(239,68,68,.3);animation:none}
+
+.card-header{display:flex;align-items:center;gap:1vw;position:relative;z-index:1}
+.wind-badge{width:6.5vh;height:6.5vh;border-radius:50%;font-size:3.6vh;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid rgba(255,255,255,.2);box-shadow:0 4px 12px rgba(0,0,0,.4),inset 0 -2px 6px rgba(0,0,0,.2);text-shadow:0 2px 4px rgba(0,0,0,.3)}
+.wind-badge.wind-E{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff}
+.wind-badge.wind-S{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff}
+.wind-badge.wind-W{background:linear-gradient(135deg,#22c55e,#15803d);color:#fff}
+.wind-badge.wind-N{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}
+.name{font-size:3vh;font-weight:800;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.05vw}
 .player.dealer .name{color:var(--accent)}
 .player.riichi .name{color:#fca5a5}
-.wind-badge{font-size:2.2vh;padding:.4vh 1vw;border-radius:.8vh;font-weight:800;flex-shrink:0;letter-spacing:.1vw}
-.wind-badge.wind-E{background:#dc2626;color:#fff;box-shadow:0 0 1vh rgba(220,38,38,.4)}
-.wind-badge.wind-S{background:#2563eb;color:#fff;box-shadow:0 0 1vh rgba(37,99,235,.4)}
-.wind-badge.wind-W{background:#16a34a;color:#fff;box-shadow:0 0 1vh rgba(22,163,74,.4)}
-.wind-badge.wind-N{background:#7c3aed;color:#fff;box-shadow:0 0 1vh rgba(124,58,237,.4)}
-.player .pts{font-size:10vh;font-weight:900;line-height:1;letter-spacing:-.2vw;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
-.player .pts.neg{color:var(--red)}
-.player .bottom-row{display:flex;justify-content:space-between;align-items:baseline;gap:1vw;font-size:2.2vh}
-.player .rank{font-weight:800;color:var(--muted);font-size:2.4vh}
-.player .rank.r1{color:var(--gold)}
-.player .rank.r4{color:#5a6478}
-.player .settle{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
-.player .settle.pos{color:var(--green)}
-.player .settle.neg{color:var(--red)}
-.badge{position:absolute;top:1.5vh;font-size:1.6vh;font-weight:800;padding:.5vh 1vw;border-radius:.8vh;letter-spacing:.1vw}
-.badge.dealer-badge{right:1.5vw;background:var(--accent);color:#1a1208}
-.badge.riichi-badge{left:1.5vw;background:var(--red);color:#fff}
+.badge-tag{font-size:1.7vh;font-weight:900;padding:.5vh 1vw;border-radius:.6vh;letter-spacing:.15vw;flex-shrink:0}
+.dealer-badge{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1208;box-shadow:0 2px 6px rgba(245,158,11,.4)}
+.riichi-badge{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;box-shadow:0 2px 6px rgba(239,68,68,.5)}
+
+.card-body{display:flex;align-items:center;justify-content:space-between;gap:1.5vw;flex:1;min-height:0}
+.pts{font-size:14vh;font-weight:900;line-height:1;letter-spacing:-.2vw;font-variant-numeric:tabular-nums;text-shadow:0 3px 12px rgba(0,0,0,.5);flex:1;min-width:0;display:flex;align-items:center}
+.pts.neg{color:var(--red);font-size:11vh}
+.avatar{width:12vh;height:12vh;border-radius:50%;font-size:6vh;font-weight:800;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff;border:3px solid rgba(255,255,255,.15);box-shadow:0 4px 16px rgba(0,0,0,.5);flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.player.dealer .avatar{border-color:rgba(245,158,11,.85);box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 2vh rgba(245,158,11,.4)}
+.player.riichi .avatar{border-color:rgba(239,68,68,.85);box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 2vh rgba(239,68,68,.4)}
+
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:1vh;border-top:1px solid rgba(255,255,255,.08);font-size:2.4vh}
+.rank{font-weight:900;color:var(--muted);letter-spacing:.1vw}
+.rank.r1{color:var(--gold)}
+.rank.r4{color:#5a6478}
+.settle{font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.settle.pos{color:var(--green)}
+.settle.neg{color:var(--red)}
+
+/* ===== 结算列表 ===== */
+.day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1}
+.day-summary.show{display:flex}
+.day-summary-header{text-align:center;display:flex;justify-content:center;align-items:baseline;gap:2vw;flex-wrap:wrap;flex-shrink:0}
+.ds-title{font-size:3.6vh;font-weight:900;color:var(--gold);letter-spacing:.2vw;text-shadow:0 0 3vh rgba(251,191,36,.4)}
+.ds-subtitle{font-size:1.8vh;color:var(--muted)}
+
+.day-summary-list{flex:1;display:flex;flex-direction:column;gap:1.2vh;min-height:0}
+
+.ds-row{
+  flex:1;display:flex;align-items:center;gap:2vw;
+  padding:1.5vh 2.5vw;
+  background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));
+  border:2px solid var(--line);
+  border-radius:1.6vh;
+  position:relative;overflow:hidden;
+}
+.ds-row.rank1{
+  flex:1.25;
+  border-color:var(--gold);
+  background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));
+  box-shadow:0 0 3vh rgba(251,191,36,.4),inset 0 0 2vh rgba(251,191,36,.06);
+}
+.ds-row.rank1::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:.8vw;
+  background:linear-gradient(180deg,#fbbf24,#f59e0b);
+  box-shadow:0 0 2vh var(--gold);
+}
+
+.ds-rank-num{
+  width:8vh;height:8vh;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:4.5vh;font-weight:900;flex-shrink:0;
+  background:var(--card);color:var(--muted);
+  border:2px solid var(--line);
+  font-variant-numeric:tabular-nums;
+}
+.ds-row.rank1 .ds-rank-num{
+  width:10vh;height:10vh;font-size:5.5vh;
+  background:linear-gradient(135deg,#fbbf24,#f59e0b);
+  color:#1a1208;border-color:var(--gold);
+  box-shadow:0 0 2.5vh rgba(251,191,36,.6);
+}
+
+.ds-avatar{
+  width:9vh;height:9vh;border-radius:50%;
+  font-size:4.5vh;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;color:#fff;flex-shrink:0;
+  border:3px solid rgba(255,255,255,.15);
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+}
+.ds-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.ds-row.rank1 .ds-avatar{
+  width:11vh;height:11vh;font-size:5.5vh;
+  border-color:var(--gold);
+  box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 2.5vh rgba(251,191,36,.5);
+}
+
+.ds-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:.6vh}
+.ds-name{font-size:3.2vh;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-row.rank1 .ds-name{color:var(--gold);font-size:3.8vh;text-shadow:0 0 1.5vh rgba(251,191,36,.4)}
+.ds-stats{font-size:1.7vh;color:var(--muted);display:flex;gap:1.5vw;flex-wrap:wrap}
+.ds-stats b{color:var(--text);font-weight:800}
+.ds-row.rank1 .ds-stats b{color:var(--gold)}
+
+.ds-total{
+  font-size:6.5vh;font-weight:900;line-height:1;
+  letter-spacing:-.15vw;font-variant-numeric:tabular-nums;
+  text-shadow:0 3px 12px rgba(0,0,0,.5);
+  flex-shrink:0;text-align:right;
+}
+.ds-total.pos{color:var(--green)}
+.ds-total.neg{color:var(--red)}
+.ds-row.rank1 .ds-total{font-size:8vh}
+
 .status{text-align:center;font-size:1.4vh;color:var(--muted);height:2vh}
 .status.ok{color:#4ade80}
 .status.err{color:var(--red)}
-.day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0}
-.day-summary.show{display:flex}
-.day-summary-header{text-align:center;display:flex;justify-content:center;align-items:baseline;gap:2vw;flex-wrap:wrap}
-.ds-title{font-size:4vh;font-weight:900;color:var(--gold);letter-spacing:.2vw;text-shadow:0 0 3vh rgba(251,191,36,.4)}
-.ds-subtitle{font-size:1.8vh;color:var(--muted)}
-.day-summary-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5vh 1.5vw;min-height:0}
-.ds-card{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.5vw;display:flex;flex-direction:column;justify-content:center;gap:1vh}
-.ds-card.rank1{background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));border-color:var(--gold);box-shadow:0 0 3vh rgba(251,191,36,.3),inset 0 0 2vh rgba(251,191,36,.05)}
-.ds-card .ds-rank-badge{position:absolute;top:1.5vh;right:1.6vw;background:var(--line);color:var(--text);font-size:1.6vh;font-weight:800;padding:.5vh 1vw;border-radius:.8vh}
-.ds-card.rank1 .ds-rank-badge{background:var(--gold);color:#1a1208}
-.ds-card .ds-top{display:flex;align-items:center;gap:1.5vw}
-.ds-card .ds-avatar{width:7vh;height:7vh;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:4vh;font-weight:800;overflow:hidden;color:#fff;border:2px solid rgba(255,255,255,.15);box-shadow:0 2px 10px rgba(0,0,0,.4)}
-.ds-card .ds-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.ds-card.rank1 .ds-avatar{border-color:rgba(251,191,36,.85);box-shadow:0 0 1.5vh rgba(251,191,36,.5)}
-.ds-card .ds-name{font-size:3vh;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ds-card.rank1 .ds-name{color:var(--gold)}
-.ds-card .ds-total{font-size:11vh;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
-.ds-card .ds-total.pos{color:var(--green)}
-.ds-card .ds-total.neg{color:var(--red)}
-.ds-card .ds-bottom{display:flex;justify-content:space-between;align-items:baseline;gap:1vw;font-size:2vh;color:var(--muted)}
-.ds-card .ds-stats{font-size:1.8vh}
-.ds-card .ds-stats b{color:var(--text)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="chip">当前局<b id="roundName">东1局</b></div>
-    <div class="chip">连庄<b id="renchan">0</b><span class="bonus" id="renchanBonus"></span></div>
-    <div class="chip riichi-chip">立直棒<b id="onTable">0</b></div>
-    <div class="chip dealer">庄家<b id="dealerName">-</b></div>
-    <div class="chip">总计<b id="total">400</b></div>
+    <div class="chip">
+      <div class="label">当前局</div>
+      <div class="value" id="roundName">东1局</div>
+    </div>
+    <div class="chip riichi-chip">
+      <div class="label">立直棒</div>
+      <div class="value" id="onTable">0</div>
+    </div>
+    <div class="chip dealer">
+      <div class="label">庄家</div>
+      <div class="value" id="dealerName">-</div>
+    </div>
+    <div class="chip">
+      <div class="label">连庄</div>
+      <div class="value"><span id="renchan">0</span><small id="renchanBonus"></small></div>
+    </div>
+    <div class="chip total-chip" id="totalChip">
+      <div class="label">总计</div>
+      <div class="value" id="total">400</div>
+    </div>
   </header>
   <div class="end-banner" id="endBanner"></div>
   <div class="grid" id="grid"></div>
@@ -99,7 +201,7 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
       <span class="ds-title">🏆 今日总战绩</span>
       <span class="ds-subtitle" id="dsDate"></span>
     </div>
-    <div class="day-summary-grid" id="dsGrid"></div>
+    <div class="day-summary-list" id="dsList"></div>
   </div>
   <div class="status" id="status">等待手机端数据…</div>
 </div>
@@ -151,22 +253,18 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
   function formatDate(iso){
     try {
       var d = new Date(iso);
-      var m = d.getMonth()+1;
-      var dd = d.getDate();
-      var hh = String(d.getHours()).padStart(2,"0");
-      var mm = String(d.getMinutes()).padStart(2,"0");
-      return m + "月" + dd + "日 " + hh + ":" + mm;
+      return (d.getMonth()+1) + "月" + d.getDate() + "日 " +
+        String(d.getHours()).padStart(2,"0") + ":" +
+        String(d.getMinutes()).padStart(2,"0");
     } catch(e){ return ""; }
   }
 
-  function isValidWinds(winds){
-    if (!Array.isArray(winds) || winds.length !== 4) return false;
-    var seen = {};
+  function isValidWinds(w){
+    if (!Array.isArray(w) || w.length !== 4) return false;
+    var s = {};
     for (var i = 0; i < 4; i++){
-      var w = winds[i];
-      if (w !== 0 && w !== 1 && w !== 2 && w !== 3) return false;
-      if (seen[w]) return false;
-      seen[w] = true;
+      if (w[i] < 0 || w[i] > 3 || s[w[i]]) return false;
+      s[w[i]] = true;
     }
     return true;
   }
@@ -174,22 +272,29 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
   function renderNormal(d){
     var ps = d.settings.players;
     var current = d.current || { riichi: [false,false,false,false] };
-    var displayRound = (typeof d.displayRound === "number" && d.displayRound > 0) ? d.displayRound : d.currentRound;
+    var displayRound = (typeof d.displayRound === "number" && d.displayRound > 0)
+      ? d.displayRound
+      : (typeof d.currentRound === "number" && d.currentRound > 0 ? d.currentRound : 1);
+    if (displayRound < 1) displayRound = 1;
     var winds = isValidWinds(d.winds) ? d.winds : [0,1,2,3];
 
     document.getElementById("roundName").textContent = roundName(displayRound);
     document.getElementById("renchan").textContent = d.renchan;
     document.getElementById("renchanBonus").textContent =
-      d.renchan > 0 ? "（+3×" + d.renchan + "）" : "";
+      d.renchan > 0 ? " · +" + (d.renchan * 3) : "";
     document.getElementById("onTable").textContent = d.onTable;
+    document.getElementById("dealerName").textContent =
+      d.dealerIdx >= 0 ? ps[d.dealerIdx].name : "-";
 
     var totalCheck = d.pts.reduce(function(a,b){ return a+b; }, 0) + d.onTable * RIICHI_VALUE;
     var totalEl = document.getElementById("total");
+    var totalChip = document.getElementById("totalChip");
     totalEl.textContent = totalCheck;
-    totalEl.style.color = totalCheck === d.settings.startPoints * 4 ? "" : "#ef4444";
-
-    document.getElementById("dealerName").textContent =
-      d.dealerIdx >= 0 ? ps[d.dealerIdx].name : "-";
+    if (totalCheck === d.settings.startPoints * 4){
+      totalChip.classList.remove("warn");
+    } else {
+      totalChip.classList.add("warn");
+    }
 
     var banner = document.getElementById("endBanner");
     if (d.gameEnded){
@@ -199,14 +304,14 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
       banner.classList.remove("show");
     }
 
-    // 逆时针布局：pos = (wind + rotation) % 4，rotation = (displayRound - 1) % 4
-    // pos0=左上, pos1=左下, pos2=右下, pos3=右上
     var rotation = (displayRound - 1) % 4;
+    if (rotation < 0) rotation = 0;
 
     var grid = document.getElementById("grid");
     grid.innerHTML = "";
     ps.forEach(function(p, i){
       var pos = (winds[i] + rotation) % 4;
+      if (pos < 0) pos = 0;
       var card = document.createElement("div");
       var cls = "player pos-" + pos;
       if (i === d.dealerIdx) cls += " dealer";
@@ -217,23 +322,23 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
       var settleClass = d.settle[i] > 0 ? "pos" : (d.settle[i] < 0 ? "neg" : "");
       var settleStr = (d.settle[i] > 0 ? "+" : "") + d.settle[i];
       var ptsClass = d.pts[i] < 0 ? "pts neg" : "pts";
+      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
 
       var badges = "";
-      if (i === d.dealerIdx) badges += '<div class="badge dealer-badge">庄</div>';
-      if (current.riichi[i]) badges += '<div class="badge riichi-badge">立直</div>';
-
-      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
-      var windHtml = '<span class="wind-badge wind-' + WINDS_EN[winds[i]] + '">' + WINDS_CN[winds[i]] + '</span>';
+      if (i === d.dealerIdx) badges += '<div class="badge-tag dealer-badge">庄</div>';
+      if (current.riichi[i]) badges += '<div class="badge-tag riichi-badge">立直</div>';
 
       card.innerHTML =
-        badges +
-        '<div class="top-row">' +
-          '<div class="avatar" style="background:' + avBg + '">' + avatarInner(p) + '</div>' +
-          '<span class="name">' + escapeHtml(p.name) + '</span>' +
-          windHtml +
+        '<div class="card-header">' +
+          '<div class="wind-badge wind-' + WINDS_EN[winds[i]] + '">' + WINDS_CN[winds[i]] + '</div>' +
+          '<div class="name">' + escapeHtml(p.name) + '</div>' +
+          badges +
         '</div>' +
-        '<div class="' + ptsClass + '">' + d.pts[i] + '</div>' +
-        '<div class="bottom-row">' +
+        '<div class="card-body">' +
+          '<div class="' + ptsClass + '">' + d.pts[i] + '</div>' +
+          '<div class="avatar" style="background:' + avBg + '">' + avatarInner(p) + '</div>' +
+        '</div>' +
+        '<div class="card-footer">' +
           '<span class="rank ' + rankClass + '">' + d.ranks[i] + '位</span>' +
           '<span class="settle ' + settleClass + '">' + settleStr + '</span>' +
         '</div>';
@@ -244,29 +349,35 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
   function renderDaySummary(d){
     var list = d.daySummary || [];
     document.getElementById("dsDate").textContent = d.dayEndedAt ? formatDate(d.dayEndedAt) : "";
-    var grid = document.getElementById("dsGrid");
-    grid.innerHTML = "";
-    list.forEach(function(sm, i){
-      var card = document.createElement("div");
-      var cls = "ds-card";
-      if (sm.rank === 1) cls += " rank1";
-      card.className = cls;
+    var container = document.getElementById("dsList");
+    container.innerHTML = "";
+
+    // 按 rank 升序排列，rank 1 在最上
+    var sorted = list.slice().sort(function(a, b){ return a.rank - b.rank; });
+
+    sorted.forEach(function(sm, idx){
+      var row = document.createElement("div");
+      row.className = "ds-row" + (sm.rank === 1 ? " rank1" : "");
+
       var settleCls = sm.totalSettle > 0 ? "pos" : (sm.totalSettle < 0 ? "neg" : "");
       var sign = sm.totalSettle > 0 ? "+" : "";
-      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
+      var avBg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
       var ranks = sm.ranks || [0,0,0,0];
-      card.innerHTML =
-        '<div class="ds-rank-badge">' + sm.rank + '位</div>' +
-        '<div class="ds-top">' +
-          '<div class="ds-avatar" style="background:' + avBg + '">' + avatarInner(sm) + '</div>' +
-          '<span class="ds-name">' + escapeHtml(sm.name) + '</span>' +
+      var firstRate = sm.matches > 0 ? Math.round(ranks[0] / sm.matches * 100) : 0;
+
+      row.innerHTML =
+        '<div class="ds-rank-num">' + sm.rank + '</div>' +
+        '<div class="ds-avatar" style="background:' + avBg + '">' + avatarInner(sm) + '</div>' +
+        '<div class="ds-info">' +
+          '<div class="ds-name">' + escapeHtml(sm.name) + '</div>' +
+          '<div class="ds-stats">' +
+            '<span><b>' + sm.matches + '</b> 场</span>' +
+            '<span>一位率 <b>' + firstRate + '%</b></span>' +
+            '<span>顺位 <b>' + ranks[0] + '/' + ranks[1] + '/' + ranks[2] + '/' + ranks[3] + '</b></span>' +
+          '</div>' +
         '</div>' +
-        '<div class="ds-total ' + settleCls + '">' + sign + sm.totalSettle + '</div>' +
-        '<div class="ds-bottom">' +
-          '<span class="ds-stats"><b>' + sm.matches + '</b>场 · <b>' + ranks[0] + '</b>次一位</span>' +
-          '<span class="ds-stats">' + ranks[0] + '/' + ranks[1] + '/' + ranks[2] + '/' + ranks[3] + '</span>' +
-        '</div>';
-      grid.appendChild(card);
+        '<div class="ds-total ' + settleCls + '">' + sign + sm.totalSettle + '</div>';
+      container.appendChild(row);
     });
   }
 
@@ -274,20 +385,17 @@ header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wra
     var dayEl = document.getElementById("daySummary");
     var gridEl = document.getElementById("grid");
     var banner = document.getElementById("endBanner");
+    var headerEl = document.querySelector("header");
     if (d.dayEnded && d.daySummary && d.daySummary.length > 0){
       gridEl.style.display = "none";
       banner.classList.remove("show");
+      headerEl.style.display = "none";
       dayEl.classList.add("show");
-      document.getElementById("roundName").textContent = "已完场";
-      document.getElementById("renchan").textContent = "—";
-      document.getElementById("renchanBonus").textContent = "";
-      document.getElementById("onTable").textContent = "—";
-      document.getElementById("dealerName").textContent = "—";
-      document.getElementById("total").textContent = "—";
       renderDaySummary(d);
     } else {
       dayEl.classList.remove("show");
       gridEl.style.display = "";
+      headerEl.style.display = "";
       renderNormal(d);
     }
   }

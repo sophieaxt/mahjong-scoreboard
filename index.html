@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>日麻记分牌 v16</title>
+<title>日麻记分牌 v18</title>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#f59e0b;--green:#22c55e;--red:#ef4444;--riichi:#ef4444;--gold:#fbbf24}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -147,6 +147,8 @@ form.input.locked{opacity:.4;pointer-events:none}
 .sound-btn-row button{flex:1;padding:10px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px}
 .wind-preview{background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:10px;margin-top:6px;font-size:13px;line-height:1.8;color:#22d3ee;font-weight:600}
 .wind-flip-btn{width:100%;margin-top:6px;padding:10px;font-size:13px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.5);color:#22d3ee;border-radius:10px;font-weight:700}
+.profile-notice{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:10px;margin-bottom:10px;font-size:12px;line-height:1.6;color:#fcd34d}
+.profile-notice b{color:#fbbf24}
 .history-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.02)}
 .history-item .hi-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
 .history-item .hi-reason{color:#fca5a5;font-weight:700;font-size:11px}
@@ -172,7 +174,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
 <header>
   <div class="title-row">
-    <div class="title">日麻记分牌<span class="ver">v16</span></div>
+    <div class="title">日麻记分牌<span class="ver">v18</span></div>
     <div class="sync idle" id="syncStatus">● 未同步</div>
   </div>
   <div class="info">
@@ -335,8 +337,9 @@ form.input.locked{opacity:.4;pointer-events:none}
     </div>
     <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。</div>
 
-    <div class="hint" style="margin-bottom:8px;color:#22d3ee">
-      座位说明：1=起家（东1局庄家）、2=起家下家、3=再下家、4=起家上家。保存时自动整理为 1/2/3/4。
+    <div class="profile-notice">
+      <b>玩家名和头像已写死在代码里</b><br>
+      要改名/换头像，请编辑 <code>index.html</code> 中的 <code>DEFAULT.settings.players</code> 并重新部署。此处只能改座位号，名字和头像的修改刷新后会恢复为代码里的值。
     </div>
 
     <div id="playerFields"></div>
@@ -352,7 +355,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v16";
+  var STORAGE_KEY = "mahjong_scoreboard_v18";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -369,6 +372,38 @@ form.input.locked{opacity:.4;pointer-events:none}
   var TSUMO_D_PAY     = [2, 4, 8, 16, 24, 32, 48, 64];
   var TIER_NAMES = ["1翻", "2翻", "3翻", "满贯", "跳满", "倍满", "三倍满", "役满"];
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
+
+  /* ============================================================
+     玩家配置：写死在这里，所有设备打开都显示同一套名字和头像
+     ============================================================
+     改名字：直接改 name 字段
+     改头像：三种方式
+       1) 图片 URL：  avatar: "https://cdn.jsdelivr.net/gh/用户名/仓库@main/avatars/p1.png"
+       2) Emoji：     avatar: "🐱"
+       3) 留空：      avatar: ""      （自动显示名字第一个字）
+
+     座位号 priority 不在这里改，用 App 设置面板改
+     ============================================================ */
+  var DEFAULT = {
+    settings: {
+      startPoints: 100, ratio: 1, headPrize: 10,
+      rankPrize: [15, 5, -5, -15], westGate: 110,
+      seatDirection: "down",
+      players: [
+        { name: "荣", priority: 1, avatar: "https://megapx-assets.dcard.tw/images/38db5822-17ea-4b24-81f3-cf34c95bb6c2/640.jpeg" },
+        { name: "颖", priority: 2, avatar: "🐶" },
+        { name: "雯", priority: 3, avatar: "🦊" },
+        { name: "马", priority: 4, avatar: "🐼" }
+      ]
+    },
+    records: [], carryover: 0,
+    current: { riichi: [false, false, false, false] },
+    gameEnded: false, endReason: "", finalRound: 0,
+    history: [], matchSaved: false,
+    dayEnded: false, daySummary: [], dayEndedAt: "",
+    soundEnabled: true,
+    soundUrl: DEFAULT_SOUND_URL
+  };
 
   var Sound = (function(){
     var enabled = true, audioUrl = "", audioEl = null, unlocked = false;
@@ -413,35 +448,22 @@ form.input.locked{opacity:.4;pointer-events:none}
     };
   })();
 
-  var DEFAULT = {
-    settings: {
-      startPoints: 100, ratio: 1, headPrize: 10,
-      rankPrize: [15, 5, -5, -15], westGate: 110,
-      seatDirection: "down",
-      players: [
-        { name: "玩家1", priority: 1, avatar: "" },
-        { name: "玩家2", priority: 2, avatar: "" },
-        { name: "玩家3", priority: 3, avatar: "" },
-        { name: "玩家4", priority: 4, avatar: "" }
-      ]
-    },
-    records: [], carryover: 0,
-    current: { riichi: [false, false, false, false] },
-    gameEnded: false, endReason: "", finalRound: 0,
-    history: [], matchSaved: false,
-    dayEnded: false, daySummary: [], dayEndedAt: "",
-    soundEnabled: true,
-    soundUrl: DEFAULT_SOUND_URL
-  };
-
-  var state = load();
-  var ROOM = initRoom();
-  var publishTimer = null;
-  var currentMode = "ron";
-  var selectedWinners = [];
-  var selectedLoser = -1;
-  var tenpai = [false, false, false, false];
-  var lastFocusedWinnerIdx = -1;
+  /* ============================================================
+     强制应用代码里写死的玩家名和头像
+     - 每次加载都覆盖 localStorage 的旧值
+     - 保留 priority（座位号）、对局记录、历史战绩等
+     ============================================================ */
+  function applyDefaultPlayerProfile(data){
+    if (!data || !data.settings || !Array.isArray(data.settings.players)) return data;
+    var def = DEFAULT.settings.players;
+    for (var i = 0; i < 4; i++){
+      if (data.settings.players[i] && def[i]){
+        data.settings.players[i].name = def[i].name;
+        data.settings.players[i].avatar = def[i].avatar;
+      }
+    }
+    return data;
+  }
 
   function normalizeSettings(s){
     if (!s) return;
@@ -478,11 +500,23 @@ form.input.locked{opacity:.4;pointer-events:none}
     return true;
   }
 
+  function computeLastRoundFromRecords(records){
+    if (!Array.isArray(records) || records.length === 0) return 0;
+    var round = 1;
+    for (var i = 0; i < records.length; i++){
+      if (records[i].renchan !== true) round++;
+    }
+    if (records[records.length - 1].renchan === true){
+      return round;
+    }
+    return round - 1;
+  }
+
   function load(){
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v15","mahjong_scoreboard_v14","mahjong_scoreboard_v13"];
+        var keys = ["mahjong_scoreboard_v17","mahjong_scoreboard_v16","mahjong_scoreboard_v15"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -504,17 +538,17 @@ form.input.locked{opacity:.4;pointer-events:none}
                 if (Array.isArray(old.records)) old.records.forEach(function(r){ r.renchan = (r.renchan === true); });
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
-                return old;
+                return applyDefaultPlayerProfile(old);
               }
             } catch(e){}
           }
         }
         Sound.setEnabled(true);
         Sound.setUrl(DEFAULT_SOUND_URL);
-        return JSON.parse(JSON.stringify(DEFAULT));
+        return applyDefaultPlayerProfile(JSON.parse(JSON.stringify(DEFAULT)));
       }
       var data = JSON.parse(raw);
-      if (!data.settings || !data.records) return JSON.parse(JSON.stringify(DEFAULT));
+      if (!data.settings || !data.records) return applyDefaultPlayerProfile(JSON.parse(JSON.stringify(DEFAULT)));
       normalizeSettings(data.settings);
       if (!isValidPriorities(data.settings.players)) normalizePriorities(data.settings.players);
       if (typeof data.carryover !== "number") data.carryover = 0;
@@ -532,13 +566,22 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
-      return data;
+      return applyDefaultPlayerProfile(data);
     } catch(e){
       Sound.setEnabled(true);
       Sound.setUrl(DEFAULT_SOUND_URL);
-      return JSON.parse(JSON.stringify(DEFAULT));
+      return applyDefaultPlayerProfile(JSON.parse(JSON.stringify(DEFAULT)));
     }
   }
+
+  var state = load();
+  var ROOM = initRoom();
+  var publishTimer = null;
+  var currentMode = "ron";
+  var selectedWinners = [];
+  var selectedLoser = -1;
+  var tenpai = [false, false, false, false];
+  var lastFocusedWinnerIdx = -1;
 
   function initRoom(){
     var params = new URLSearchParams(location.search);
@@ -570,7 +613,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 16, settings: state.settings, pts: c.pts, current: state.current,
+      v: 18, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -686,8 +729,13 @@ form.input.locked{opacity:.4;pointer-events:none}
     var renchan = getRenchanCount();
 
     var displayRound = currentRound;
-    if (state.gameEnded && typeof state.finalRound === "number" && state.finalRound > 0){
-      displayRound = state.finalRound;
+    if (state.gameEnded){
+      if (typeof state.finalRound === "number" && state.finalRound > 0){
+        displayRound = state.finalRound;
+      } else {
+        var lastR = computeLastRoundFromRecords(state.records);
+        displayRound = lastR > 0 ? lastR : currentRound;
+      }
     }
 
     var dealerPriority = ((displayRound - 1) % 4) + 1;
@@ -1087,11 +1135,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     return co;
   }
 
-  // 【修复版】重新检查终局状态
-  // - 被飞：finalRound = currentRound - 1（当前还没打完的那局不算）
-  //   但如果正好在局中被打到 <= 0（提交后调用），currentRound 已经是"下一局"，所以 -1 就是刚打完的这局
-  // - 南4局结束/西风圈：finalRound = currentRound - 1
-  //   如果 c.currentRound > 8，说明已经打完南4局（或更多），最后一局 = currentRound - 1
   function recheckGameEnd(){
     var s = state.settings;
     var c = compute();
@@ -1099,7 +1142,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.endReason = "";
     state.finalRound = 0;
 
-    // 1. 被飞优先
     for (var i = 0; i < 4; i++){
       if (c.pts[i] <= 0){
         state.gameEnded = true;
@@ -1109,7 +1151,6 @@ form.input.locked{opacity:.4;pointer-events:none}
       }
     }
 
-    // 2. 南4局已结束 / 西风圈有人达标
     if (c.currentRound > 8){
       for (var i = 0; i < 4; i++){
         if (c.pts[i] >= s.westGate){
@@ -1195,8 +1236,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       state.gameEnded = true;
       state.endReason = state.endReason || "手动完场";
       if (state.finalRound <= 0){
+        var lastR = computeLastRoundFromRecords(state.records);
         var c = compute();
-        state.finalRound = c.currentRound;
+        state.finalRound = lastR > 0 ? lastR : c.currentRound;
       }
       saveMatchToHistory();
     } else if (state.records.length > 0 && state.gameEnded && !state.matchSaved){
@@ -1701,7 +1743,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
           if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
           if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
-          state = data;
+          state = applyDefaultPlayerProfile(data);
           Sound.setEnabled(state.soundEnabled);
           Sound.setUrl(state.soundUrl);
           recheckGameEnd();
@@ -1735,10 +1777,11 @@ form.input.locked{opacity:.4;pointer-events:none}
       var block = document.createElement("div");
       block.className = "player-settings-block";
       var seatVal = (typeof p.priority === "number" && p.priority >= 1 && p.priority <= 4) ? p.priority : (i+1);
+      // 设置面板里名字/头像只读展示，只能改座位号
       block.innerHTML =
         '<div class="grid2">' +
-          '<div class="field"><label>玩家' + (i+1) + '名</label>' +
-          '<input type="text" data-pname="' + i + '" value="' + escapeHtml(p.name) + '"></div>' +
+          '<div class="field"><label>玩家' + (i+1) + '名（代码写死）</label>' +
+          '<input type="text" value="' + escapeHtml(p.name) + '" disabled style="opacity:.6"></div>' +
           '<div class="field"><label>座位</label>' +
           '<select data-pprio="' + i + '">' +
             '<option value="1"' + (seatVal === 1 ? ' selected' : '') + '>1（起家）</option>' +
@@ -1747,9 +1790,8 @@ form.input.locked{opacity:.4;pointer-events:none}
             '<option value="4"' + (seatVal === 4 ? ' selected' : '') + '>4（起家上家）</option>' +
           '</select></div>' +
         '</div>' +
-        '<div class="field" style="margin-bottom:0"><label>头像（emoji 或图片 URL）</label>' +
-        '<input type="text" data-pavatar="' + i + '" value="' + escapeHtml(p.avatar || "") + '" placeholder="例如 🐱 或 https://...">' +
-        '</div>' +
+        '<div class="field" style="margin-bottom:0"><label>头像（代码写死）</label>' +
+        '<input type="text" value="' + escapeHtml(p.avatar || "") + '" disabled style="opacity:.6" placeholder="留空用名字首字"></div>' +
         '<div class="avatar-preview">' +
           '<div class="avatar-sm" data-avpreview="' + i + '" style="background:' + avatarBg(p, i) + '">' + avatarInner(p, i) + '</div>' +
           '<span class="preview-text">预览</span>' +
@@ -1773,31 +1815,12 @@ form.input.locked{opacity:.4;pointer-events:none}
   document.getElementById("btnCancelSettings").addEventListener("click", function(){ modal.classList.remove("open"); });
   modal.addEventListener("click", function(e){ if (e.target === modal) modal.classList.remove("open"); });
 
-  modal.addEventListener("input", function(e){
-    var t = e.target;
-    if (t.hasAttribute("data-pavatar") || t.hasAttribute("data-pname")){
-      var i = Number(t.getAttribute("data-pavatar") || t.getAttribute("data-pname"));
-      var nameInp = modal.querySelector('[data-pname="' + i + '"]');
-      var avInp = modal.querySelector('[data-pavatar="' + i + '"]');
-      var fakePlayer = { name: nameInp ? nameInp.value : "", avatar: avInp ? avInp.value : "" };
-      var pvEl = modal.querySelector('[data-avpreview="' + i + '"]');
-      if (pvEl){
-        pvEl.style.background = avatarBg(fakePlayer, i);
-        pvEl.innerHTML = avatarInner(fakePlayer, i);
-      }
-    }
-  });
-
   modal.addEventListener("change", function(e){
     if (e.target.hasAttribute("data-pprio")){
       var newPlayers = state.settings.players.map(function(p){ return { name: p.name, priority: p.priority, avatar: p.avatar }; });
       document.querySelectorAll("[data-pprio]").forEach(function(inp){
         var i = Number(inp.getAttribute("data-pprio"));
         newPlayers[i].priority = Number(inp.value) || (i+1);
-      });
-      document.querySelectorAll("[data-pname]").forEach(function(inp){
-        var i = Number(inp.getAttribute("data-pname"));
-        newPlayers[i].name = inp.value.trim() || ("玩家" + (i+1));
       });
       var orig = state.settings.players;
       state.settings.players = newPlayers;
@@ -1829,20 +1852,15 @@ form.input.locked{opacity:.4;pointer-events:none}
       Number(document.getElementById("setRank3").value) || -5,
       Number(document.getElementById("setRank4").value) || -15
     ];
-    document.querySelectorAll("[data-pname]").forEach(function(inp){
-      var i = Number(inp.getAttribute("data-pname"));
-      s.players[i].name = inp.value.trim() || ("玩家" + (i+1));
-    });
+    // 只改座位号，名字和头像由 applyDefaultPlayerProfile 强制覆盖
     document.querySelectorAll("[data-pprio]").forEach(function(inp){
       var i = Number(inp.getAttribute("data-pprio"));
       var v = Number(inp.value);
       if (v >= 1 && v <= 4) s.players[i].priority = v;
     });
     normalizePriorities(s.players);
-    document.querySelectorAll("[data-pavatar]").forEach(function(inp){
-      var i = Number(inp.getAttribute("data-pavatar"));
-      s.players[i].avatar = inp.value.trim();
-    });
+    // 强制应用代码里的名字和头像
+    applyDefaultPlayerProfile(state);
     if (newRoom !== ROOM){
       ROOM = newRoom;
       if (ROOM) localStorage.setItem(ROOM_KEY, ROOM);

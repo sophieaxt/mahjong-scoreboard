@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>日麻记分牌 v12</title>
+<title>日麻记分牌 v15</title>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#f59e0b;--green:#22c55e;--red:#ef4444;--riichi:#ef4444;--gold:#fbbf24}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -172,7 +172,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
 <header>
   <div class="title-row">
-    <div class="title">日麻记分牌<span class="ver">v12</span></div>
+    <div class="title">日麻记分牌<span class="ver">v15</span></div>
     <div class="sync idle" id="syncStatus">● 未同步</div>
   </div>
   <div class="info">
@@ -312,7 +312,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
     <div class="field">
       <label>座位方向</label>
-      <div class="hint">东1局自风预览，核对是否符合期望（庄=东，庄下家=南，再下家=西，庄上家=北）：</div>
+      <div class="hint">门风预览：庄家永远是东，下家南，对家西，上家北。跟场风（东场/南场）无关。</div>
       <div class="wind-preview" id="windPreview">—</div>
       <button type="button" id="btnFlipSeatDir" class="wind-flip-btn">方向不符？点此切换</button>
     </div>
@@ -352,7 +352,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v12";
+  var STORAGE_KEY = "mahjong_scoreboard_v15";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -427,7 +427,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     },
     records: [], carryover: 0,
     current: { riichi: [false, false, false, false] },
-    gameEnded: false, endReason: "",
+    gameEnded: false, endReason: "", finalRound: 0,
     history: [], matchSaved: false,
     dayEnded: false, daySummary: [], dayEndedAt: "",
     soundEnabled: true,
@@ -482,7 +482,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v11","mahjong_scoreboard_v10","mahjong_scoreboard_v9"];
+        var keys = ["mahjong_scoreboard_v14","mahjong_scoreboard_v13","mahjong_scoreboard_v12"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -493,7 +493,7 @@ form.input.locked{opacity:.4;pointer-events:none}
                 if (!isValidPriorities(old.settings.players)) normalizePriorities(old.settings.players);
                 old.carryover = old.carryover || 0;
                 if (!old.current) old.current = { riichi: [false,false,false,false] };
-                old.gameEnded = false; old.endReason = "";
+                old.gameEnded = false; old.endReason = ""; old.finalRound = 0;
                 if (!Array.isArray(old.history)) old.history = [];
                 old.matchSaved = false;
                 old.dayEnded = false; old.daySummary = []; old.dayEndedAt = "";
@@ -519,6 +519,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (!data.current || !Array.isArray(data.current.riichi)) data.current = { riichi: [false,false,false,false] };
       if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
       if (typeof data.endReason !== "string") data.endReason = "";
+      if (typeof data.finalRound !== "number") data.finalRound = 0;
       if (!Array.isArray(data.history)) data.history = [];
       if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
       if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
@@ -567,8 +568,9 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 12, settings: state.settings, pts: c.pts, current: state.current,
+      v: 15, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
+      displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
       settle: c.settle, onTable: c.onTable,
       winds: c.winds,
@@ -601,15 +603,10 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
-  // 自风计算：seatOrder = priority 1,2,3,4 对应的玩家 index
-  // dealerSeatPos = 庄家在 seatOrder 中的位置
-  // 对每个玩家：d = 相对庄家的顺时针步数（0=庄, 1=下家, 2=再下家, 3=上家）
-  // 自风 = (windOffset + d) % 4
   function computeWinds(currentRound){
     var s = state.settings;
     var players = s.players;
     if (!Array.isArray(players) || players.length !== 4) return [0,0,0,0];
-
     var seatOrder = [];
     for (var k = 1; k <= 4; k++){
       var found = -1;
@@ -619,18 +616,15 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (found < 0) return [0,0,0,0];
       seatOrder.push(found);
     }
-
-    var windOffset = Math.floor((currentRound - 1) / 4);
     var dealerSeatPos = (currentRound - 1) % 4;
     var dirDown = (s.seatDirection !== "up");
-
     var winds = [0,0,0,0];
     for (var k2 = 0; k2 < 4; k2++){
       var playerIdx = seatOrder[k2];
       var d;
       if (dirDown) d = (k2 - dealerSeatPos + 4) % 4;
-      else d = (dealerSeatPos - k2 + 4) % 4;
-      winds[playerIdx] = (windOffset + d) % 4;
+      else         d = (dealerSeatPos - k2 + 4) % 4;
+      winds[playerIdx] = d;
     }
     return winds;
   }
@@ -688,7 +682,13 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.records.forEach(function(r){ if (r.renchan !== true) nonRenchan++; });
     var currentRound = nonRenchan + 1;
     var renchan = getRenchanCount();
-    var dealerPriority = ((currentRound - 1) % 4) + 1;
+
+    var displayRound = currentRound;
+    if (state.gameEnded && typeof state.finalRound === "number" && state.finalRound > 0){
+      displayRound = state.finalRound;
+    }
+
+    var dealerPriority = ((displayRound - 1) % 4) + 1;
     var dealerIdx = -1;
     s.players.forEach(function(p, i){ if (p.priority === dealerPriority) dealerIdx = i; });
     var order = s.players.map(function(p, i){
@@ -708,12 +708,12 @@ form.input.locked{opacity:.4;pointer-events:none}
     });
     var riichiCount = state.current.riichi.filter(Boolean).length;
     var onTable = state.carryover + riichiCount;
-    var winds = computeWinds(currentRound);
+    var winds = computeWinds(displayRound);
     var startIdx = -1;
     s.players.forEach(function(p, i){ if (p.priority === 1) startIdx = i; });
     return {
-      pts: pts, currentRound: currentRound, renchan: renchan,
-      dealerPriority: dealerPriority, dealerIdx: dealerIdx,
+      pts: pts, currentRound: currentRound, displayRound: displayRound,
+      renchan: renchan, dealerPriority: dealerPriority, dealerIdx: dealerIdx,
       ranks: ranks, settle: settle, onTable: onTable, riichiCount: riichiCount,
       winds: winds, startIdx: startIdx
     };
@@ -912,10 +912,16 @@ form.input.locked{opacity:.4;pointer-events:none}
 
     for (var i = 0; i < 4; i++){ if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE; }
 
+    // 南4局（All Last）庄家和牌终局规则
     if (c.currentRound === 8 && selectedWinners.some(function(w){ return w.idx === c.dealerIdx; })){
       var sim = simulateAfter(changes);
-      if (sim.ranks[c.dealerIdx] === 1) notes.push("⚠ 南4局庄家第一，按规则应结束比赛");
-      else notes.push("⚠ 南4局庄家不是第一，按规则必须连庄");
+      if (sim.ranks[c.dealerIdx] === 1 && sim.pts[c.dealerIdx] >= s.westGate){
+        notes.push("⚠ 南4局庄家第一且 ≥" + s.westGate + "，比赛结束");
+      } else if (sim.ranks[c.dealerIdx] === 1){
+        notes.push("⚠ 南4局庄家第一但未达 " + s.westGate + "，强制连庄");
+      } else {
+        notes.push("⚠ 南4局庄家不是第一，强制连庄");
+      }
     }
 
     return { changes: changes, notes: notes };
@@ -928,7 +934,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     var c = compute();
     var s = state.settings;
 
-    document.getElementById("roundName").textContent = roundName(c.currentRound);
+    document.getElementById("roundName").textContent = roundName(c.displayRound);
     document.getElementById("renchan").textContent = c.renchan;
     document.getElementById("renchanBonus").textContent =
       c.renchan > 0 ? "（+" + (RENCHAN_BONUS * c.renchan) + "）" : "";
@@ -1055,6 +1061,7 @@ form.input.locked{opacity:.4;pointer-events:none}
         state.records.splice(i, 1);
         if (wasSaved){ state.history.shift(); state.matchSaved = false; }
         state.carryover = recalcCarryover();
+        state.finalRound = 0;
         recheckGameEnd();
         maybeSaveMatch();
         save(); render();
@@ -1080,6 +1087,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     var c = compute();
     state.gameEnded = false;
     state.endReason = "";
+    state.finalRound = 0;
     for (var i = 0; i < 4; i++){
       if (c.pts[i] <= 0){
         state.gameEnded = true;
@@ -1138,7 +1146,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (!confirm("开始新一场？当前对局记录将清空，战绩已保存到历史。")) return;
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
-    state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
+    state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
     lastFocusedWinnerIdx = -1;
@@ -1196,7 +1204,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先导出备份数据。")) return;
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
-    state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
+    state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
     state.history = []; state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
@@ -1521,6 +1529,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       winnersForRecord = selectedWinners.slice();
     }
 
+    // 基础连庄判定
     var renchan;
     if (currentMode === "draw"){
       renchan = c.dealerIdx >= 0 && tenpai[c.dealerIdx] === true;
@@ -1528,11 +1537,18 @@ form.input.locked{opacity:.4;pointer-events:none}
       renchan = winnersForRecord.some(function(w){ return w.idx === c.dealerIdx; });
     }
 
+    // 南4局（All Last）庄家和牌终局规则
+    // 庄家和牌，若为第一名且点数 ≥ westGate，终局；否则强制连庄
     var sim = null;
+    var allLastDealerWin = false;
     if (c.currentRound === 8 && currentMode !== "draw" && renchan){
       sim = simulateAfter(changes);
-      if (sim.ranks[c.dealerIdx] === 1) renchan = false;
-      else renchan = true;
+      allLastDealerWin = true;
+      if (sim.ranks[c.dealerIdx] === 1 && sim.pts[c.dealerIdx] >= s.westGate){
+        renchan = false; // 第一名且达标 → 终局
+      } else {
+        renchan = true;  // 第一名但未达标，或非第一名 → 强制连庄
+      }
     }
 
     if (currentMode === "draw") state.carryover += riichiCount;
@@ -1547,6 +1563,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     record.winner = winnersForRecord.length > 0 ? winnersForRecord[0].idx : -1;
     record.han = winnersForRecord.length > 0 ? winnersForRecord[0].han : 0;
 
+    var completedRound = c.currentRound;
     state.records.push(record);
     state.current.riichi = [false, false, false, false];
 
@@ -1560,14 +1577,16 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (flown >= 0){
       state.gameEnded = true;
       state.endReason = s.players[flown].name + " 被飞";
-    } else if (c.currentRound === 8 && currentMode !== "draw" && renchan === false && sim && sim.ranks[c.dealerIdx] === 1){
-      state.gameEnded = true;
-      state.endReason = "南4局庄家第一，终局";
     } else if (c.currentRound === 8 && !renchan){
+      // 南4局非连庄：庄家下庄，或庄家和牌且已判定终局
       var allBelow = nc.pts.every(function(p){ return p < s.westGate; });
       if (!allBelow){
         state.gameEnded = true;
-        state.endReason = "南4局结束，有人达到 " + s.westGate;
+        if (allLastDealerWin){
+          state.endReason = "南4局庄家第一且达到 " + s.westGate + "，终局";
+        } else {
+          state.endReason = "南4局结束，有人达到 " + s.westGate;
+        }
       }
     } else if (nc.currentRound > 8){
       for (var i = 0; i < 4; i++){
@@ -1577,6 +1596,10 @@ form.input.locked{opacity:.4;pointer-events:none}
           break;
         }
       }
+    }
+
+    if (state.gameEnded){
+      state.finalRound = completedRound;
     }
 
     maybeSaveMatch();
@@ -1604,6 +1627,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (wasSaved){ state.history.shift(); state.matchSaved = false; }
     state.carryover = recalcCarryover();
     state.current.riichi = [false, false, false, false];
+    state.finalRound = 0;
     recheckGameEnd();
     maybeSaveMatch();
     save(); render();
@@ -1660,6 +1684,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (!data.current) data.current = { riichi: [false,false,false,false] };
           if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
           if (typeof data.endReason !== "string") data.endReason = "";
+          if (typeof data.finalRound !== "number") data.finalRound = 0;
           if (!Array.isArray(data.history)) data.history = [];
           if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
           if (typeof data.dayEnded !== "boolean") data.dayEnded = false;

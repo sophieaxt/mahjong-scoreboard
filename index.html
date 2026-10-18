@@ -322,6 +322,10 @@ form.input.locked{opacity:.4;pointer-events:none}
     </div>
     <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。</div>
 
+    <div class="hint" style="margin-bottom:8px;color:var(--accent)">
+      座位号决定起家顺序：1=起家（东1局庄家）、2=南、3=西、4=北。保存时自动整理为 1/2/3/4，不会重复。
+    </div>
+
     <div id="playerFields"></div>
 
     <div class="actions">
@@ -353,7 +357,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   var TIER_NAMES = ["1翻", "2翻", "3翻", "满贯", "跳满", "倍满", "三倍满", "役满"];
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
 
-  // ===== 立直音效（外部音频） =====
+  // ===== 立直音效 =====
   var Sound = (function(){
     var enabled = true;
     var audioUrl = "";
@@ -455,6 +459,18 @@ form.input.locked{opacity:.4;pointer-events:none}
     s.players.forEach(function(p){ if (typeof p.avatar !== "string") p.avatar = ""; });
   }
 
+  // 规范化座位号：按当前 priority 升序，重复时按原 index 顺序，依次分配 1/2/3/4
+  function normalizePriorities(players){
+    if (!Array.isArray(players) || players.length === 0) return;
+    var sorted = players.map(function(p, i){
+      return { p: p, i: i, prio: (typeof p.priority === "number" && p.priority > 0) ? p.priority : (i + 1) };
+    }).sort(function(a, b){
+      if (a.prio !== b.prio) return a.prio - b.prio;
+      return a.i - b.i;
+    });
+    sorted.forEach(function(o, idx){ o.p.priority = idx + 1; });
+  }
+
   function load(){
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -467,6 +483,7 @@ form.input.locked{opacity:.4;pointer-events:none}
               var old = JSON.parse(oldRaw);
               if (old.settings && old.records){
                 normalizeSettings(old.settings);
+                normalizePriorities(old.settings.players);
                 old.carryover = old.carryover || 0;
                 if (!old.current) old.current = { riichi: [false,false,false,false] };
                 old.gameEnded = false; old.endReason = "";
@@ -474,7 +491,6 @@ form.input.locked{opacity:.4;pointer-events:none}
                 old.matchSaved = false;
                 old.dayEnded = false; old.daySummary = []; old.dayEndedAt = "";
                 if (typeof old.soundEnabled !== "boolean") old.soundEnabled = true;
-                // 旧数据 soundUrl 为空时自动填入默认链接
                 if (!old.soundUrl || typeof old.soundUrl !== "string") old.soundUrl = DEFAULT_SOUND_URL;
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
@@ -490,6 +506,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       var data = JSON.parse(raw);
       if (!data.settings || !data.records) return JSON.parse(JSON.stringify(DEFAULT));
       normalizeSettings(data.settings);
+      normalizePriorities(data.settings.players);
       if (typeof data.carryover !== "number") data.carryover = 0;
       if (!data.current || !Array.isArray(data.current.riichi)){
         data.current = { riichi: [false,false,false,false] };
@@ -502,7 +519,6 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (!Array.isArray(data.daySummary)) data.daySummary = [];
       if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
       if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
-      // 兼容旧数据：soundUrl 为空时填默认链接
       if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
@@ -578,6 +594,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
+  // 关键算法：庄家 priority = ((currentRound - 1) % 4) + 1
+  // 每个玩家自风 = (windOffset + 相对庄家的距离) % 4
   function computeWinds(currentRound){
     var s = state.settings;
     var windOffset = Math.floor((currentRound - 1) / 4);
@@ -1514,7 +1532,9 @@ form.input.locked{opacity:.4;pointer-events:none}
         state.gameEnded = true;
         state.endReason = "南4局庄家第一，终局";
       }
-    } else if (c.currentRound === 8){
+    } else if (c.currentRound === 8 && !renchan){
+      // 只有非连庄（下庄）时才检查是否有人达到门槛
+      // 庄家听牌流局连庄时，即使有人达到门槛也不结束
       var allBelow = nc.pts.every(function(p){ return p < s.westGate; });
       if (!allBelow){
         state.gameEnded = true;
@@ -1611,6 +1631,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (!data.settings || !data.records) throw new Error("格式不对");
           if (!confirm("导入会覆盖当前数据，继续？")) return;
           normalizeSettings(data.settings);
+          normalizePriorities(data.settings.players);
           if (typeof data.carryover !== "number") data.carryover = 0;
           if (!data.current) data.current = { riichi: [false,false,false,false] };
           if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
@@ -1655,12 +1676,13 @@ form.input.locked{opacity:.4;pointer-events:none}
     s.players.forEach(function(p, i){
       var block = document.createElement("div");
       block.className = "player-settings-block";
+      var seatLabel = p.priority === 1 ? "座位号（起家）" : "座位号";
       block.innerHTML =
         '<div class="grid2">' +
           '<div class="field"><label>玩家' + (i+1) + '名</label>' +
           '<input type="text" data-pname="' + i + '" value="' + escapeHtml(p.name) + '"></div>' +
-          '<div class="field"><label>起家优先</label>' +
-          '<input type="number" data-pprio="' + i + '" value="' + p.priority + '"></div>' +
+          '<div class="field"><label>' + seatLabel + '</label>' +
+          '<input type="number" data-pprio="' + i + '" value="' + p.priority + '" min="1" max="4"></div>' +
         '</div>' +
         '<div class="field" style="margin-bottom:0"><label>头像（emoji 或图片 URL）</label>' +
         '<input type="text" data-pavatar="' + i + '" value="' + escapeHtml(p.avatar || "") + '" placeholder="例如 🐱 或 https://...">' +
@@ -1728,6 +1750,8 @@ form.input.locked{opacity:.4;pointer-events:none}
       var i = Number(inp.getAttribute("data-pprio"));
       s.players[i].priority = Number(inp.value) || (i+1);
     });
+    // 保存时规范化座位号为 1/2/3/4，防止重复导致庄家/风位错乱
+    normalizePriorities(s.players);
     document.querySelectorAll("[data-pavatar]").forEach(function(inp){
       var i = Number(inp.getAttribute("data-pavatar"));
       s.players[i].avatar = inp.value.trim();
@@ -1740,6 +1764,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     recheckGameEnd();
     maybeSaveMatch();
     save(); render();
+    // 重开设置面板，让用户看到规范化后的座位号
+    openSettings();
     modal.classList.remove("open");
     setSync(ROOM ? "pending" : "idle");
     schedulePublish();

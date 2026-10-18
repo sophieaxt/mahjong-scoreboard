@@ -22,6 +22,7 @@ html,body{
 .wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;
   padding:1.5vh 1.5vw;gap:1.2vh}
 
+/* ===== Header ===== */
 header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9vh}
 .chip{display:flex;flex-direction:column;justify-content:center;align-items:center;
   padding:1vh 1.6vw;border-radius:1.2vh;min-width:9vw;
@@ -36,6 +37,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .chip.riichi-chip .value{color:var(--red)}
 .chip.total-chip.warn .value{color:var(--red)}
 
+/* ===== 正常比赛网格 ===== */
 .grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.1vh 1.1vw;min-height:0}
 .player{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.2vw;display:flex;flex-direction:column;gap:1.2vh;overflow:hidden;transition:all .3s}
 .player.pos-0{grid-column:1;grid-row:1}
@@ -80,7 +82,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .settle.pos{color:var(--green)}
 .settle.neg{color:var(--red)}
 
-/* 本场结算 */
+/* ===== 本场结算 ===== */
 .match-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1}
 .match-summary.show{display:flex}
 .ms-header{text-align:center;flex-shrink:0}
@@ -110,7 +112,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .ms-settle.neg{color:var(--red)}
 .ms-row.rank1 .ms-settle{font-size:9vh;color:var(--gold);text-shadow:0 0 3vh rgba(251,191,36,.6)}
 
-/* 总冠军 */
+/* ===== 今日总冠军 ===== */
 .day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1;position:relative;overflow:hidden}
 .day-summary.show{display:flex}
 .day-summary::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(251,191,36,.18) 0%,transparent 60%);pointer-events:none}
@@ -156,7 +158,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .runner-stats{font-size:1.5vh;color:var(--muted);text-align:center}
 .runner-stats b{color:var(--text)}
 
-/* 点炮动画 */
+/* ===== 点炮动画 ===== */
 .cannon-shell{
   position:fixed;font-size:6vh;z-index:9999;pointer-events:none;
   transform:translate(-50%,-50%);
@@ -212,7 +214,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
   90%{transform:translate(-1vh,0) rotate(-2deg)}
 }
 
-/* 自摸金币动画 */
+/* ===== 自摸金币动画 ===== */
 .coin-fly{
   position:fixed;font-size:6vh;z-index:9999;pointer-events:none;
   transform:translate(-50%,-50%);
@@ -435,7 +437,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     });
   }
 
-  // 点炮动画
+  /* ===== 点炮动画 ===== */
   function playCannonAnimation(winnerIdx, loserIdx){
     var winnerCard = document.querySelector('.player[data-idx="' + winnerIdx + '"]');
     var loserCard = document.querySelector('.player[data-idx="' + loserIdx + '"]');
@@ -507,7 +509,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     }
   }
 
-  // 自摸金币汇聚动画
+  /* ===== 自摸金币汇聚动画 ===== */
   function playTsumoAnimation(winnerIdx, payerIdxs, winnerChange){
     var winnerCard = document.querySelector('.player[data-idx="' + winnerIdx + '"]');
     if (!winnerCard) return;
@@ -530,7 +532,6 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
       var dx = endX - startX;
       var dy = endY - startY;
 
-      // 付款方卡片微小抖动，模拟掏钱
       setTimeout(function(){
         item.card.style.transition = "transform 0.15s ease-out";
         item.card.style.transform = "scale(0.96)";
@@ -552,7 +553,6 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
       }, i * 150 + 100);
     });
 
-    // 所有金币到达后：自摸者金光 + 放大 + 飘字
     setTimeout(function(){
       winnerCard.style.transition = "transform 0.25s ease-out, box-shadow 0.3s ease-out";
       winnerCard.style.transform = "scale(1.08)";
@@ -577,6 +577,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     }, totalDelay + 600);
   }
 
+  /* ===== 本场结算 ===== */
   function showMatchSummary(d){
     document.getElementById("mainHeader").style.display = "none";
     document.getElementById("grid").style.display = "none";
@@ -620,6 +621,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     });
   }
 
+  /* ===== 今日总冠军 ===== */
   function createConfetti(){
     var container = document.getElementById("daySummary");
     container.querySelectorAll(".confetti").forEach(function(el){ el.remove(); });
@@ -694,6 +696,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     createConfetti();
   }
 
+  /* ===== 总渲染 ===== */
   function render(d){
     if (d.dayEnded && d.daySummary && d.daySummary.length > 0){
       showDaySummary(d);

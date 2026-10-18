@@ -330,13 +330,13 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     });
   }
 
-  function avatarInner(p){
+   function avatarInner(p){
     var a = (p.avatar || "").trim();
+    var ch = (p.name || "?").trim().charAt(0) || "?";
     if (/^https?:\/\//i.test(a)){
-      return '<img src="' + escapeHtml(a) + '" alt="" onerror="this.style.display=\'none\'">';
+      return '<img src="' + escapeHtml(a) + '" alt="' + escapeHtml(ch) + '" data-fallback="' + escapeHtml(ch) + '" onerror="this.outerHTML=this.getAttribute(\'data-fallback\')||\'?\'">';
     }
     if (a) return escapeHtml(a);
-    var ch = (p.name || "?").trim().charAt(0) || "?";
     return escapeHtml(ch);
   }
 

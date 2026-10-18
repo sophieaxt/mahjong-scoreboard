@@ -246,7 +246,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       <span class="btn-label">听牌</span>
       <div class="btn-group" id="tenpaiBtns"></div>
     </div>
-    <div class="draw-hint">流局满贯成立时，请改用"自摸"模式、翻数填 4 录入，优先于不听罚则。</div>
+    <div class="draw-hint">流局满贯成立时，请改用自摸模式、翻数填 4 录入，优先于不听罚则。</div>
   </div>
 
   <div class="preview" id="preview"></div>
@@ -312,7 +312,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
     <div class="field">
       <label>座位方向</label>
-      <div class="hint">东1局自风预览，看下面是否符合你的期望（庄=东、庄下家=南、再下家=西、庄上家=北）：</div>
+      <div class="hint">东1局自风预览，核对是否符合期望（庄=东，庄下家=南，再下家=西，庄上家=北）：</div>
       <div class="wind-preview" id="windPreview">—</div>
       <button type="button" id="btnFlipSeatDir" class="wind-flip-btn">方向不符？点此切换</button>
     </div>
@@ -601,35 +601,16 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
-  // 【核心修复】自风计算：基于打牌顺序数组，绝对正确
-  // 
-  // 定义：
-  //   seatOrder = 按 priority 升序排列的玩家数组
-  //   seatOrder[0] = priority 1 = 起家
-  //   seatOrder[1] = priority 2 = 起家下家（打牌方向的下一个）
-  //   seatOrder[2] = priority 3 = 起家再下家
-  //   seatOrder[3] = priority 4 = 起家上家
-  //
-  //   打牌顺序：起家(东) → 起家下家(南) → 再下家(西) → 上家(北) → 起家(东)...
-  //
-  // 计算：
-  //   第 currentRound 局，庄家在打牌顺序中的位置 = ((currentRound - 1) % 4)
-  //   场风偏移 windOffset = floor((currentRound - 1) / 4)  （0=东场, 1=南场, 2=西场, 3=北场）
-  //   对每个玩家：
-  //     pos = 该玩家在 seatOrder 中的位置（0-3）
-  //     d = (pos - dealerPos + 4) % 4  （相对庄家的顺时针步数，0=庄自己, 1=下家, 2=再下家, 3=上家）
-  //     自风 = (windOffset + d) % 4
-  //
-  // 方向 seatDirection：
-  //   "down"：priority 1→2→3→4 是打牌方向（默认，符合"2=起家下家"的 UI 语义）
-  //   "up"  ：priority 1→2→3→4 是反打牌方向（兼容用户按相反方向填座位的情况）
+  // 自风计算：seatOrder = priority 1,2,3,4 对应的玩家 index
+  // dealerSeatPos = 庄家在 seatOrder 中的位置
+  // 对每个玩家：d = 相对庄家的顺时针步数（0=庄, 1=下家, 2=再下家, 3=上家）
+  // 自风 = (windOffset + d) % 4
   function computeWinds(currentRound){
     var s = state.settings;
     var players = s.players;
     if (!Array.isArray(players) || players.length !== 4) return [0,0,0,0];
 
-    // 1. 按 priority 1,2,3,4 找每个座位上对应的玩家 index
-    var seatOrder = [];  // seatOrder[k] = priority (k+1) 的玩家在 players 数组中的 index
+    var seatOrder = [];
     for (var k = 1; k <= 4; k++){
       var found = -1;
       for (var i = 0; i < 4; i++){
@@ -639,23 +620,16 @@ form.input.locked{opacity:.4;pointer-events:none}
       seatOrder.push(found);
     }
 
-    // 2. 场风偏移和庄家位置
     var windOffset = Math.floor((currentRound - 1) / 4);
-    var dealerSeatPos = (currentRound - 1) % 4;  // 庄家在 seatOrder 中的位置（0-3）
-
-    // 3. 方向
+    var dealerSeatPos = (currentRound - 1) % 4;
     var dirDown = (s.seatDirection !== "up");
 
-    // 4. 计算每个玩家的自风
     var winds = [0,0,0,0];
     for (var k2 = 0; k2 < 4; k2++){
       var playerIdx = seatOrder[k2];
       var d;
-      if (dirDown){
-        d = (k2 - dealerSeatPos + 4) % 4;
-      } else {
-        d = (dealerSeatPos - k2 + 4) % 4;
-      }
+      if (dirDown) d = (k2 - dealerSeatPos + 4) % 4;
+      else d = (dealerSeatPos - k2 + 4) % 4;
       winds[playerIdx] = (windOffset + d) % 4;
     }
     return winds;
@@ -1161,7 +1135,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       alert("当前没有进行中的对局");
       return;
     }
-    if (!confirm("开始新一场？当前对局记录将清空（战绩已保存到历史）。")) return;
+    if (!confirm("开始新一场？当前对局记录将清空，战绩已保存到历史。")) return;
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
@@ -1219,7 +1193,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   }
 
   function startNewDay(){
-    if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先点"导出"备份数据。")) return;
+    if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先导出备份数据。")) return;
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
@@ -1532,8 +1506,8 @@ form.input.locked{opacity:.4;pointer-events:none}
 
   document.getElementById("form").addEventListener("submit", function(e){
     e.preventDefault();
-    if (state.dayEnded){ alert("今日已完场，请点"开新一天"后再继续"); return; }
-    if (state.gameEnded){ alert("比赛已结束，请点"开新一场"或撤销后再继续"); return; }
+    if (state.dayEnded){ alert("今日已完场，请点开新一天后再继续"); return; }
+    if (state.gameEnded){ alert("比赛已结束，请点开新一场或撤销后再继续"); return; }
     var pv = computePreview();
     var changes = pv.changes;
     var riichiCount = state.current.riichi.filter(Boolean).length;
@@ -1547,7 +1521,6 @@ form.input.locked{opacity:.4;pointer-events:none}
       winnersForRecord = selectedWinners.slice();
     }
 
-    // 强制按规则计算 renchan
     var renchan;
     if (currentMode === "draw"){
       renchan = c.dealerIdx >= 0 && tenpai[c.dealerIdx] === true;
@@ -1622,7 +1595,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   });
 
   document.getElementById("btnUndo").addEventListener("click", function(){
-    if (state.dayEnded){ alert("今日已完场，请先点"开新一天""); return; }
+    if (state.dayEnded){ alert("今日已完场，请先点开新一天"); return; }
     if (state.records.length === 0) return;
     var wasSaved = state.matchSaved && state.history && state.history.length > 0;
     var msg = wasSaved ? "撤销最后一局？已保存的战绩也会被移除。" : "撤销最后一局？";
@@ -1784,8 +1757,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
   modal.addEventListener("change", function(e){
     if (e.target.hasAttribute("data-pprio")){
-      // 用户改座位时，实时更新预览（不保存）
-      var newPlayers = state.settings.players.map(function(p, i){ return { name: p.name, priority: p.priority, avatar: p.avatar }; });
+      var newPlayers = state.settings.players.map(function(p){ return { name: p.name, priority: p.priority, avatar: p.avatar }; });
       document.querySelectorAll("[data-pprio]").forEach(function(inp){
         var i = Number(inp.getAttribute("data-pprio"));
         newPlayers[i].priority = Number(inp.value) || (i+1);
@@ -1794,7 +1766,6 @@ form.input.locked{opacity:.4;pointer-events:none}
         var i = Number(inp.getAttribute("data-pname"));
         newPlayers[i].name = inp.value.trim() || ("玩家" + (i+1));
       });
-      // 临时替换 settings.players 算预览
       var orig = state.settings.players;
       state.settings.players = newPlayers;
       var winds = computeWinds(1);

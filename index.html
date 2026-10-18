@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>日麻记分牌 v18</title>
+<title>日麻记分牌 v20</title>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#f59e0b;--green:#22c55e;--red:#ef4444;--riichi:#ef4444;--gold:#fbbf24}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -174,7 +174,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
 <header>
   <div class="title-row">
-    <div class="title">日麻记分牌<span class="ver">v18</span></div>
+    <div class="title">日麻记分牌<span class="ver">v20</span></div>
     <div class="sync idle" id="syncStatus">● 未同步</div>
   </div>
   <div class="info">
@@ -355,7 +355,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v18";
+  var STORAGE_KEY = "mahjong_scoreboard_v20";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -373,27 +373,16 @@ form.input.locked{opacity:.4;pointer-events:none}
   var TIER_NAMES = ["1翻", "2翻", "3翻", "满贯", "跳满", "倍满", "三倍满", "役满"];
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
 
-  /* ============================================================
-     玩家配置：写死在这里，所有设备打开都显示同一套名字和头像
-     ============================================================
-     改名字：直接改 name 字段
-     改头像：三种方式
-       1) 图片 URL：  avatar: "https://cdn.jsdelivr.net/gh/用户名/仓库@main/avatars/p1.png"
-       2) Emoji：     avatar: "🐱"
-       3) 留空：      avatar: ""      （自动显示名字第一个字）
-
-     座位号 priority 不在这里改，用 App 设置面板改
-     ============================================================ */
   var DEFAULT = {
     settings: {
       startPoints: 100, ratio: 1, headPrize: 10,
       rankPrize: [15, 5, -5, -15], westGate: 110,
       seatDirection: "down",
       players: [
-        { name: "荣", priority: 1, avatar: "https://megapx-assets.dcard.tw/images/38db5822-17ea-4b24-81f3-cf34c95bb6c2/640.jpeg" },
-        { name: "颖", priority: 2, avatar: "🐶" },
-        { name: "雯", priority: 3, avatar: "🦊" },
-        { name: "马", priority: 4, avatar: "🐼" }
+        { name: "张三", priority: 1, avatar: "🐱" },
+        { name: "李四", priority: 2, avatar: "🐶" },
+        { name: "王五", priority: 3, avatar: "🦊" },
+        { name: "赵六", priority: 4, avatar: "🐼" }
       ]
     },
     records: [], carryover: 0,
@@ -402,7 +391,9 @@ form.input.locked{opacity:.4;pointer-events:none}
     history: [], matchSaved: false,
     dayEnded: false, daySummary: [], dayEndedAt: "",
     soundEnabled: true,
-    soundUrl: DEFAULT_SOUND_URL
+    soundUrl: DEFAULT_SOUND_URL,
+    lastWinAnim: null,
+    lastTsumoAnim: null
   };
 
   var Sound = (function(){
@@ -448,11 +439,6 @@ form.input.locked{opacity:.4;pointer-events:none}
     };
   })();
 
-  /* ============================================================
-     强制应用代码里写死的玩家名和头像
-     - 每次加载都覆盖 localStorage 的旧值
-     - 保留 priority（座位号）、对局记录、历史战绩等
-     ============================================================ */
   function applyDefaultPlayerProfile(data){
     if (!data || !data.settings || !Array.isArray(data.settings.players)) return data;
     var def = DEFAULT.settings.players;
@@ -516,7 +502,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v17","mahjong_scoreboard_v16","mahjong_scoreboard_v15"];
+        var keys = ["mahjong_scoreboard_v19","mahjong_scoreboard_v18","mahjong_scoreboard_v17"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -536,6 +522,8 @@ form.input.locked{opacity:.4;pointer-events:none}
                 if (typeof old.soundEnabled !== "boolean") old.soundEnabled = true;
                 if (!old.soundUrl || typeof old.soundUrl !== "string") old.soundUrl = DEFAULT_SOUND_URL;
                 if (Array.isArray(old.records)) old.records.forEach(function(r){ r.renchan = (r.renchan === true); });
+                if (!old.lastWinAnim) old.lastWinAnim = null;
+                if (!old.lastTsumoAnim) old.lastTsumoAnim = null;
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
                 return applyDefaultPlayerProfile(old);
@@ -564,6 +552,8 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
       if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
       if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
+      if (!data.lastWinAnim) data.lastWinAnim = null;
+      if (!data.lastTsumoAnim) data.lastTsumoAnim = null;
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
       return applyDefaultPlayerProfile(data);
@@ -613,7 +603,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 18, settings: state.settings, pts: c.pts, current: state.current,
+      v: 20, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -621,7 +611,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       winds: c.winds,
       gameEnded: state.gameEnded, endReason: state.endReason,
       dayEnded: state.dayEnded, daySummary: state.daySummary || [],
-      dayEndedAt: state.dayEndedAt || ""
+      dayEndedAt: state.dayEndedAt || "",
+      lastWinAnim: state.lastWinAnim || null,
+      lastTsumoAnim: state.lastTsumoAnim || null
     };
     fetch(NTFY_BASE + encodeURIComponent(ROOM), {
       method: "POST",
@@ -1197,6 +1189,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
+    state.lastWinAnim = null;
+    state.lastTsumoAnim = null;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
     lastFocusedWinnerIdx = -1;
@@ -1252,6 +1246,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.daySummary = computeDaySummary();
     state.dayEnded = true;
     state.dayEndedAt = new Date().toISOString();
+    state.lastWinAnim = null;
+    state.lastTsumoAnim = null;
     save(); render(); schedulePublish(); openDaySummary();
   }
 
@@ -1261,6 +1257,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
     state.history = []; state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
+    state.lastWinAnim = null;
+    state.lastTsumoAnim = null;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
     lastFocusedWinnerIdx = -1;
@@ -1616,6 +1614,34 @@ form.input.locked{opacity:.4;pointer-events:none}
     record.winner = winnersForRecord.length > 0 ? winnersForRecord[0].idx : -1;
     record.han = winnersForRecord.length > 0 ? winnersForRecord[0].han : 0;
 
+    // 生成动画事件
+    if (currentMode === "tsumo" && winnersForRecord.length > 0){
+      var widx = winnersForRecord[0].idx;
+      var payerIdxs = [];
+      for (var pi = 0; pi < 4; pi++){
+        if (pi !== widx) payerIdxs.push(pi);
+      }
+      state.lastTsumoAnim = {
+        id: Date.now() + "_" + Math.floor(Math.random() * 100000),
+        winnerIdx: widx,
+        payerIdxs: payerIdxs,
+        winnerChange: changes[widx],
+        ts: Date.now()
+      };
+      state.lastWinAnim = null;
+    } else if (currentMode === "ron" && winnersForRecord.length > 0 && selectedLoser >= 0){
+      state.lastWinAnim = {
+        id: Date.now() + "_" + Math.floor(Math.random() * 100000),
+        winnerIdx: winnersForRecord[0].idx,
+        loserIdx: selectedLoser,
+        ts: Date.now()
+      };
+      state.lastTsumoAnim = null;
+    } else {
+      state.lastWinAnim = null;
+      state.lastTsumoAnim = null;
+    }
+
     var completedRound = c.currentRound;
     state.records.push(record);
     state.current.riichi = [false, false, false, false];
@@ -1678,6 +1704,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     if (wasSaved){ state.history.shift(); state.matchSaved = false; }
     state.carryover = recalcCarryover();
     state.current.riichi = [false, false, false, false];
+    state.lastWinAnim = null;
+    state.lastTsumoAnim = null;
     recheckGameEnd();
     maybeSaveMatch();
     save(); render();
@@ -1743,6 +1771,8 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
           if (!data.soundUrl || typeof data.soundUrl !== "string") data.soundUrl = DEFAULT_SOUND_URL;
           if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
+          if (!data.lastWinAnim) data.lastWinAnim = null;
+          if (!data.lastTsumoAnim) data.lastTsumoAnim = null;
           state = applyDefaultPlayerProfile(data);
           Sound.setEnabled(state.soundEnabled);
           Sound.setUrl(state.soundUrl);
@@ -1777,7 +1807,6 @@ form.input.locked{opacity:.4;pointer-events:none}
       var block = document.createElement("div");
       block.className = "player-settings-block";
       var seatVal = (typeof p.priority === "number" && p.priority >= 1 && p.priority <= 4) ? p.priority : (i+1);
-      // 设置面板里名字/头像只读展示，只能改座位号
       block.innerHTML =
         '<div class="grid2">' +
           '<div class="field"><label>玩家' + (i+1) + '名（代码写死）</label>' +
@@ -1852,14 +1881,12 @@ form.input.locked{opacity:.4;pointer-events:none}
       Number(document.getElementById("setRank3").value) || -5,
       Number(document.getElementById("setRank4").value) || -15
     ];
-    // 只改座位号，名字和头像由 applyDefaultPlayerProfile 强制覆盖
     document.querySelectorAll("[data-pprio]").forEach(function(inp){
       var i = Number(inp.getAttribute("data-pprio"));
       var v = Number(inp.value);
       if (v >= 1 && v <= 4) s.players[i].priority = v;
     });
     normalizePriorities(s.players);
-    // 强制应用代码里的名字和头像
     applyDefaultPlayerProfile(state);
     if (newRoom !== ROOM){
       ROOM = newRoom;

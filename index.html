@@ -2,662 +2,119 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0f172a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>日麻记分牌</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>日麻记分牌 · 展示</title>
 <style>
-:root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#f59e0b;--green:#22c55e;--red:#ef4444;--riichi:#ef4444;--gold:#fbbf24}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;padding-bottom:460px}
-input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-input[type=number]{-moz-appearance:textfield}
-header{position:sticky;top:0;z-index:10;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--line)}
-.title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.title{font-size:17px;font-weight:700}
-.sync{font-size:12px;padding:4px 8px;border-radius:8px;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--muted)}
-.sync.ok{color:var(--green);border-color:#14532d;background:#052e16}
-.sync.err{color:var(--red);border-color:#7f1d1d;background:#2a0a0a}
-.sync.pending{color:var(--accent)}
-.info{display:flex;gap:6px;flex-wrap:wrap}
-.chip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:13px;white-space:nowrap}
-.chip b{color:var(--accent)}
-.chip.dealer b{color:#fb923c}
-.chip.riichi b{color:var(--riichi)}
-.chip .bonus{color:var(--accent);font-size:11px;margin-left:2px;font-weight:700}
-.end-banner{display:none;margin:8px 12px;padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;font-size:14px;font-weight:700;text-align:center;border:1px solid #dc2626}
+:root{--bg:#0a0e1a;--bg2:#162236;--card:#1a2236;--line:#2a3448;--text:#e8edf5;--muted:#8896ab;--accent:#f59e0b;--gold:#fbbf24;--green:#22c55e;--red:#ef4444;--riichi:#ef4444}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:radial-gradient(circle at top,var(--bg2) 0%,var(--bg) 70%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+.wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding:2vh 2vw;gap:1.5vh}
+header{display:flex;justify-content:center;align-items:center;gap:1.2vw;flex-wrap:nowrap}
+.chip{background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(20,28,46,.95));border:1px solid var(--line);border-radius:1.2vh;padding:1vh 1.5vw;font-size:2.2vh;font-weight:500;color:var(--muted);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:baseline;gap:.5vw}
+.chip b{color:var(--text);font-size:2.8vh;font-weight:800;margin-left:.3vw}
+.chip.dealer{border-color:rgba(245,158,11,.5);background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95))}
+.chip.dealer b{color:var(--accent)}
+.chip.riichi-chip{border-color:rgba(239,68,68,.5)}
+.chip.riichi-chip b{color:var(--red)}
+.chip .bonus{font-size:1.5vh;color:var(--accent);margin-left:.3vw;font-weight:700}
+.end-banner{display:none;text-align:center;font-size:2.4vh;font-weight:800;padding:1.2vh 2vw;border-radius:1.2vh;background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;border:1px solid #dc2626;box-shadow:0 0 2vh rgba(239,68,68,.4)}
 .end-banner.show{display:block}
-.end-banner-actions{display:flex;gap:8px;justify-content:center;margin-top:8px}
-.end-banner-actions button{padding:8px 16px;font-size:13px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px}
-.end-banner-actions button.primary{background:var(--accent);color:#111;border-color:var(--accent)}
-.day-banner{display:none;margin:8px 12px;padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,#14532d,#166534);color:#fff;font-size:14px;font-weight:700;text-align:center;border:1px solid #22c55e}
-.day-banner.show{display:block}
-.day-banner button{margin-top:8px;padding:8px 16px;font-size:13px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px}
-.players{padding:12px;display:flex;flex-direction:column;gap:8px}
-.player{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;transition:all .2s;display:flex;flex-direction:column;gap:6px}
-.player.dealer{border:2px solid var(--accent);background:#3b2f1a;box-shadow:0 0 0 2px rgba(245,158,11,.2)}
-.player.riichi{border:2px solid var(--riichi);background:#2a0a0a;box-shadow:0 0 0 2px rgba(239,68,68,.2)}
-.player.dealer.riichi{border:2px solid var(--accent);background:linear-gradient(135deg,#3b2f1a,#2a0a0a);box-shadow:0 0 0 2px rgba(245,158,11,.2),0 0 0 4px rgba(239,68,68,.15)}
-.player-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.player-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.avatar-sm{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;overflow:hidden;background:#2a3448;color:#e2e8f0;border:1px solid rgba(255,255,255,.08)}
-.avatar-sm img{width:100%;height:100%;object-fit:cover;display:block}
-.player.dealer .avatar-sm{border-color:rgba(245,158,11,.7);box-shadow:0 0 0 2px rgba(245,158,11,.2)}
-.player.riichi .avatar-sm{border-color:rgba(239,68,68,.7);box-shadow:0 0 0 2px rgba(239,68,68,.2)}
-.player .name{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5vh 1.5vw;min-height:0}
+.player{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.5vw;display:flex;flex-direction:column;justify-content:center;gap:1vh;overflow:hidden;transition:all .3s}
+.player.dealer{background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));border-color:rgba(245,158,11,.7);box-shadow:0 0 2vh rgba(245,158,11,.2),inset 0 0 2vh rgba(245,158,11,.05)}
+.player.riichi{background:linear-gradient(135deg,rgba(42,10,16,.95),rgba(30,8,12,.95));border-color:rgba(239,68,68,.7);box-shadow:0 0 2vh rgba(239,68,68,.2),inset 0 0 2vh rgba(239,68,68,.05)}
+.player.dealer.riichi{background:linear-gradient(135deg,rgba(58,26,24,.95),rgba(40,18,16,.95));border-color:rgba(245,158,11,.8);box-shadow:0 0 2vh rgba(245,158,11,.25),0 0 2vh rgba(239,68,68,.15)}
+.player .top-row{display:flex;align-items:center;gap:1.5vw}
+.player .avatar{width:8vh;height:8vh;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:4.5vh;font-weight:800;overflow:hidden;color:#fff;border:2px solid rgba(255,255,255,.15);box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.player .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.player.dealer .avatar{border-color:rgba(245,158,11,.85);box-shadow:0 0 1.5vh rgba(245,158,11,.5)}
+.player.riichi .avatar{border-color:rgba(239,68,68,.85);box-shadow:0 0 1.5vh rgba(239,68,68,.5)}
+.player .name{font-size:3vh;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .player.dealer .name{color:var(--accent)}
 .player.riichi .name{color:#fca5a5}
-.riichi-btn{padding:4px 10px;font-size:12px;border-radius:8px;flex-shrink:0;background:var(--card);border:1px solid var(--line);color:var(--muted);font-weight:700;transition:all .15s}
-.riichi-btn.on{background:var(--riichi);border-color:var(--riichi);color:#fff}
-.player-bottom{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.player .pts{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.wind-badge{font-size:2.2vh;padding:.4vh 1vw;border-radius:.8vh;font-weight:800;flex-shrink:0;letter-spacing:.1vw}
+.wind-badge.wind-E{background:#dc2626;color:#fff;box-shadow:0 0 1vh rgba(220,38,38,.4)}
+.wind-badge.wind-S{background:#2563eb;color:#fff;box-shadow:0 0 1vh rgba(37,99,235,.4)}
+.wind-badge.wind-W{background:#16a34a;color:#fff;box-shadow:0 0 1vh rgba(22,163,74,.4)}
+.wind-badge.wind-N{background:#7c3aed;color:#fff;box-shadow:0 0 1vh rgba(124,58,237,.4)}
+.player .pts{font-size:10vh;font-weight:900;line-height:1;letter-spacing:-.2vw;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
 .player .pts.neg{color:var(--red)}
-.player .rank{font-size:18px;font-weight:800}
-.player .rank.r1{color:#fbbf24}
-.player .rank.r4{color:var(--muted)}
-.player .settle{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.player .bottom-row{display:flex;justify-content:space-between;align-items:baseline;gap:1vw;font-size:2.2vh}
+.player .rank{font-weight:800;color:var(--muted);font-size:2.4vh}
+.player .rank.r1{color:var(--gold)}
+.player .rank.r4{color:#5a6478}
+.player .settle{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
 .player .settle.pos{color:var(--green)}
 .player .settle.neg{color:var(--red)}
-.history{padding:0 12px 12px}
-.history h3{font-size:13px;color:var(--muted);margin:16px 0 8px}
-.rec{display:flex;justify-content:space-between;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:13px}
-.rec .meta{flex:1;min-width:0}
-.rec .round{font-weight:700;color:var(--accent)}
-.rec .chg{color:var(--muted);margin-top:3px;word-break:break-all}
-.rec .tag{display:inline-block;padding:1px 6px;border-radius:6px;font-size:11px;margin-left:4px;background:#334155;color:#cbd5e1}
-.rec .tag.renchan{background:#14532d;color:#86efac}
-.rec .tag.riichi{background:#7f1d1d;color:#fca5a5}
-.rec .tag.win{background:#14532d;color:#86efac}
-.rec .tag.draw{background:#334155;color:#cbd5e1}
-.rec .tag.tsumo{background:#1e3a8a;color:#93c5fd}
-.rec .tag.han{background:#78350f;color:#fcd34d}
-.rec .tag.multi{background:#7c2d12;color:#fdba74}
-.rec button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:4px 8px;font-size:12px;flex-shrink:0;margin-left:8px}
-.toolbar{display:flex;gap:6px;padding:0 12px 12px;flex-wrap:wrap}
-.toolbar button{flex:1;min-width:55px;padding:9px 4px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px;font-size:12px}
-.toolbar button.end-day{background:#7f1d1d;border-color:#dc2626;color:#fff;font-weight:700}
-.toolbar button.end-day.new-day{background:#14532d;border-color:#22c55e}
-form.input{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#111827;border-top:1px solid var(--line);padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
-form.input.locked{opacity:.4;pointer-events:none}
-.mode-tabs{display:flex;gap:4px;margin-bottom:8px}
-.mode-tabs button{flex:1;padding:9px;font-size:14px;font-weight:700;background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:9px;transition:all .15s}
-.mode-tabs button.active{background:var(--accent);border-color:var(--accent);color:#111}
-.btn-line{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.btn-label{font-size:12px;color:var(--muted);flex-shrink:0;width:36px}
-.btn-group{display:flex;gap:4px;flex:1;flex-wrap:wrap}
-.btn-group button{flex:1;min-width:0;padding:7px 4px;font-size:12px;background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btn-group button.active{background:var(--accent);border-color:var(--accent);color:#111;font-weight:700}
-.btn-group button.multi-active{background:#0e7490;border-color:#0e7490;color:#fff;font-weight:700}
-.btn-group button:disabled{opacity:.35}
-.han-rows{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
-.han-row{display:flex;align-items:center;gap:6px;background:rgba(14,116,144,.15);border:1px solid rgba(14,116,144,.4);border-radius:8px;padding:5px 8px}
-.han-row .han-name{font-size:12px;font-weight:700;color:#22d3ee;flex:0 0 auto;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.han-row input{flex:1;padding:6px;font-size:16px;text-align:center;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:7px;font-weight:700;min-width:0}
-.han-row .tier-mini{font-size:11px;color:var(--accent);font-weight:700;flex:0 0 auto;min-width:36px;text-align:center}
-.han-quick{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-bottom:6px}
-.han-quick button{padding:6px 2px;font-size:11px;background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:7px;white-space:nowrap;overflow:hidden}
-.han-quick button.active{background:#78350f;border-color:#78350f;color:#fcd34d;font-weight:700}
-.draw-line{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.draw-hint{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:4px}
-.preview{padding:6px 8px;background:rgba(0,0,0,.25);border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:6px;min-height:22px;color:var(--muted);word-break:break-all}
-.preview .pv-row{display:flex;justify-content:space-between;padding:1px 0}
-.preview .pv-row b{font-weight:700}
-.preview .pv-pos{color:var(--green)}
-.preview .pv-neg{color:var(--red)}
-.preview .pv-tag{font-size:10px;color:var(--muted);margin-left:4px}
-.preview .pv-note{color:var(--accent);font-size:11px}
-.row2{display:flex;gap:6px;align-items:center;margin-top:4px}
-.row2 .renchan{display:flex;align-items:center;gap:5px;font-size:13px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 10px;white-space:nowrap;transition:all .15s}
-.row2 .renchan input{width:17px;height:17px;margin:0}
-.row2 .renchan.auto{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.5);color:#86efac}
-.row2 .renchan .auto-tag{font-size:10px;color:#86efac;font-weight:700;margin-left:2px}
-.row2 input.note{flex:1;padding:9px 10px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:9px;min-width:0}
-.row2 button.submit{flex:0 0 auto;padding:9px 16px;font-size:15px;font-weight:700;background:var(--accent);color:#111;border:none;border-radius:9px}
-.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);display:none;align-items:flex-end}
-.modal.open{display:flex}
-.modal .sheet{width:100%;max-height:88vh;overflow-y:auto;background:var(--bg);border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
-.modal h2{margin:0 0 12px;font-size:18px}
-.field{margin-bottom:10px}
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
-.field input{width:100%;padding:10px;font-size:16px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.player-settings-block{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:rgba(255,255,255,.02)}
-.player-settings-block .grid2{margin-bottom:0}
-.avatar-preview{display:flex;align-items:center;gap:8px;margin-top:6px}
-.avatar-preview .avatar-sm{width:38px;height:38px;font-size:20px}
-.avatar-preview .preview-text{font-size:11px;color:var(--muted)}
-.modal .actions{display:flex;gap:8px;margin-top:14px}
-.modal .actions button{flex:1;padding:12px;font-size:15px;font-weight:700;border:none;border-radius:10px}
-.modal .actions .ok{background:var(--accent);color:#111}
-.modal .actions .cancel{background:var(--card);color:var(--text);border:1px solid var(--line)}
-.hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
-.sound-toggle{display:flex;align-items:center;gap:8px;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;cursor:pointer}
-.sound-toggle input{width:20px;height:20px;margin:0}
-.sound-toggle span{font-size:14px;color:var(--text)}
-.btn-test-sound{width:100%;margin-top:8px;padding:10px;font-size:13px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px}
-.diag-box{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;font-size:12px;line-height:1.6;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
-.diag-box b{color:var(--text)}
-.diag-box .diag-ok{color:var(--green)}
-.diag-box .diag-bad{color:var(--red)}
-.history-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.02)}
-.history-item .hi-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
-.history-item .hi-reason{color:#fca5a5;font-weight:700;font-size:11px}
-.history-item .hi-player{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
-.history-item .hi-rank1{color:#fbbf24;font-weight:700}
-.history-item .hi-settle-pos{color:var(--green)}
-.history-item .hi-settle-neg{color:var(--red)}
-.history-empty{text-align:center;color:var(--muted);padding:20px;font-size:13px}
-.day-summary-date{font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px}
-.ds-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,.02)}
-.ds-row.rank1{border-color:var(--gold);background:rgba(251,191,36,.08);box-shadow:0 0 0 1px rgba(251,191,36,.3)}
-.ds-rank{font-size:22px;font-weight:800;width:30px;text-align:center;color:var(--muted)}
-.ds-row.rank1 .ds-rank{color:var(--gold)}
-.ds-info{flex:1;min-width:0}
-.ds-name{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ds-stats{font-size:11px;color:var(--muted);margin-top:2px}
-.ds-total{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
-.ds-total.pos{color:var(--green)}
-.ds-total.neg{color:var(--red)}
+.badge{position:absolute;top:1.5vh;font-size:1.6vh;font-weight:800;padding:.5vh 1vw;border-radius:.8vh;letter-spacing:.1vw}
+.badge.dealer-badge{right:1.5vw;background:var(--accent);color:#1a1208}
+.badge.riichi-badge{left:1.5vw;background:var(--red);color:#fff}
+.status{text-align:center;font-size:1.4vh;color:var(--muted);height:2vh}
+.status.ok{color:#4ade80}
+.status.err{color:var(--red)}
+.day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0}
+.day-summary.show{display:flex}
+.day-summary-header{text-align:center;display:flex;justify-content:center;align-items:baseline;gap:2vw;flex-wrap:wrap}
+.ds-title{font-size:4vh;font-weight:900;color:var(--gold);letter-spacing:.2vw;text-shadow:0 0 3vh rgba(251,191,36,.4)}
+.ds-subtitle{font-size:1.8vh;color:var(--muted)}
+.day-summary-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5vh 1.5vw;min-height:0}
+.ds-card{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.5vw;display:flex;flex-direction:column;justify-content:center;gap:1vh}
+.ds-card.rank1{background:linear-gradient(135deg,rgba(58,42,16,.95),rgba(40,28,10,.95));border-color:var(--gold);box-shadow:0 0 3vh rgba(251,191,36,.3),inset 0 0 2vh rgba(251,191,36,.05)}
+.ds-card .ds-rank-badge{position:absolute;top:1.5vh;right:1.6vw;background:var(--line);color:var(--text);font-size:1.6vh;font-weight:800;padding:.5vh 1vw;border-radius:.8vh}
+.ds-card.rank1 .ds-rank-badge{background:var(--gold);color:#1a1208}
+.ds-card .ds-top{display:flex;align-items:center;gap:1.5vw}
+.ds-card .ds-avatar{width:7vh;height:7vh;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:4vh;font-weight:800;overflow:hidden;color:#fff;border:2px solid rgba(255,255,255,.15);box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.ds-card .ds-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.ds-card.rank1 .ds-avatar{border-color:rgba(251,191,36,.85);box-shadow:0 0 1.5vh rgba(251,191,36,.5)}
+.ds-card .ds-name{font-size:3vh;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-card.rank1 .ds-name{color:var(--gold)}
+.ds-card .ds-total{font-size:11vh;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.ds-card .ds-total.pos{color:var(--green)}
+.ds-card .ds-total.neg{color:var(--red)}
+.ds-card .ds-bottom{display:flex;justify-content:space-between;align-items:baseline;gap:1vw;font-size:2vh;color:var(--muted)}
+.ds-card .ds-stats{font-size:1.8vh}
+.ds-card .ds-stats b{color:var(--text)}
 </style>
 </head>
 <body>
-
-<header>
-  <div class="title-row">
-    <div class="title">日麻记分牌</div>
-    <div class="sync idle" id="syncStatus">● 未同步</div>
+<div class="wrap">
+  <header>
+    <div class="chip">当前局<b id="roundName">东1局</b></div>
+    <div class="chip">连庄<b id="renchan">0</b><span class="bonus" id="renchanBonus"></span></div>
+    <div class="chip riichi-chip">立直棒<b id="onTable">0</b></div>
+    <div class="chip dealer">庄家<b id="dealerName">-</b></div>
+    <div class="chip">总计<b id="total">400</b></div>
+  </header>
+  <div class="end-banner" id="endBanner"></div>
+  <div class="grid" id="grid"></div>
+  <div class="day-summary" id="daySummary">
+    <div class="day-summary-header">
+      <span class="ds-title">🏆 今日总战绩</span>
+      <span class="ds-subtitle" id="dsDate"></span>
+    </div>
+    <div class="day-summary-grid" id="dsGrid"></div>
   </div>
-  <div class="info">
-    <div class="chip">当前局 <b id="roundName">东1局</b></div>
-    <div class="chip">连庄 <b id="renchan">0</b><span class="bonus" id="renchanBonus"></span></div>
-    <div class="chip riichi">立直棒 <b id="onTable">0</b></div>
-    <div class="chip dealer">庄家 <b id="dealerName">-</b></div>
-    <div class="chip">总计 <b id="total">400</b></div>
-  </div>
-</header>
-
-<div class="end-banner" id="endBanner">
-  <div id="endBannerText"></div>
-  <div class="end-banner-actions">
-    <button type="button" id="btnStartNewMatch" class="primary">开新一场</button>
-  </div>
-</div>
-
-<div class="day-banner" id="dayBanner">
-  <div id="dayBannerText">🏆 今日比赛已完场</div>
-  <button type="button" id="btnShowDaySummary">查看总战绩</button>
-</div>
-
-<div class="players" id="players"></div>
-
-<div class="history">
-  <h3>对局记录</h3>
-  <div id="records"></div>
-  <div class="toolbar">
-    <button id="btnSettings">设置</button>
-    <button id="btnHistory">战绩</button>
-    <button id="btnExport">导出</button>
-    <button id="btnImport">导入</button>
-    <button id="btnUndo">撤销</button>
-    <button id="btnEndDay" class="end-day">完场</button>
-  </div>
-</div>
-
-<form class="input" id="form">
-  <div class="mode-tabs" id="modeTabs">
-    <button type="button" data-mode="ron" class="active">点炮</button>
-    <button type="button" data-mode="tsumo">自摸</button>
-    <button type="button" data-mode="draw">流局</button>
-  </div>
-
-  <div id="winArea">
-    <div class="btn-line">
-      <span class="btn-label" id="winnerLabel">赢家</span>
-      <div class="btn-group" id="winnerBtns"></div>
-    </div>
-    <div class="han-rows" id="hanRows"></div>
-    <div class="btn-line" id="loserLine">
-      <span class="btn-label">放铳</span>
-      <div class="btn-group" id="loserBtns"></div>
-    </div>
-    <div class="han-quick" id="hanQuick">
-      <button type="button" data-han="1">1翻</button>
-      <button type="button" data-han="2">2翻</button>
-      <button type="button" data-han="3">3翻</button>
-      <button type="button" data-han="4">满贯</button>
-      <button type="button" data-han="6">跳满</button>
-      <button type="button" data-han="8">倍满</button>
-      <button type="button" data-han="11">三倍满</button>
-      <button type="button" data-han="13">役满</button>
-    </div>
-  </div>
-
-  <div id="drawArea" style="display:none">
-    <div class="draw-line">
-      <span class="btn-label">听牌</span>
-      <div class="btn-group" id="tenpaiBtns"></div>
-    </div>
-    <div class="draw-hint">流局满贯成立时，请改用“自摸”模式、翻数填 4 录入，优先于不听罚则。</div>
-  </div>
-
-  <div class="preview" id="preview"></div>
-
-  <div class="row2">
-    <label class="renchan" id="renchanLabel">
-      <input type="checkbox" id="renchanChk">连庄
-      <span class="auto-tag" id="renchanAutoTag" style="display:none">自动</span>
-    </label>
-    <input class="note" id="note" placeholder="备注">
-    <button class="submit" type="submit">记录</button>
-  </div>
-</form>
-
-<div class="modal" id="historyModal">
-  <div class="sheet">
-    <h2>历史战绩</h2>
-    <div id="historyList"></div>
-    <div class="actions">
-      <button class="ok" id="btnCloseHistory">关闭</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal" id="daySummaryModal">
-  <div class="sheet">
-    <h2>今日总战绩</h2>
-    <div class="day-summary-date" id="daySummaryDate"></div>
-    <div id="daySummaryList"></div>
-    <div class="actions">
-      <button class="cancel" id="btnCloseDaySummary">关闭</button>
-      <button class="ok" id="btnNewDayFromSummary">开新一天</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal" id="settingsModal">
-  <div class="sheet">
-    <h2>设置</h2>
-
-    <div class="field">
-      <label>同步房间号（电视端用 display.html?room=房间号 打开）</label>
-      <input type="text" id="setRoom" placeholder="留空则不同步">
-      <div class="hint">建议用一串随机字符，如 mj-a7f3k9x2。</div>
-    </div>
-
-    <div class="field">
-      <label>音效</label>
-      <label class="sound-toggle">
-        <input type="checkbox" id="setSoundEnabled">
-        <span>开启立直语音和提示音</span>
-      </label>
-      <button type="button" id="btnTestSound" class="btn-test-sound">测试音效（立直→和牌→完场）</button>
-      <button type="button" id="btnDiagSound" class="btn-test-sound" style="margin-top:6px">语音诊断</button>
-      <div class="diag-box" id="diagBox" style="display:none"></div>
-    </div>
-
-    <div class="grid2">
-      <div class="field"><label>起始点数</label><input type="number" id="setStart"></div>
-      <div class="field"><label>换算比率</label><input type="number" step="0.01" id="setRatio"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>头名奖（每人出）</label><input type="number" id="setHeadPrize"></div>
-      <div class="field"><label>西入门槛</label><input type="number" id="setWestGate"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>1位顺位马</label><input type="number" id="setRank1"></div>
-      <div class="field"><label>2位顺位马</label><input type="number" id="setRank2"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>3位顺位马</label><input type="number" id="setRank3"></div>
-      <div class="field"><label>4位顺位马</label><input type="number" id="setRank4"></div>
-    </div>
-    <div class="hint">结算分 = 分差 × 换算比率 + 头名奖 + 顺位马。</div>
-
-    <div id="playerFields"></div>
-
-    <div class="actions">
-      <button class="cancel" id="btnCancelSettings">取消</button>
-      <button class="ok" id="btnSaveSettings">保存</button>
-    </div>
-  </div>
+  <div class="status" id="status">等待手机端数据…</div>
 </div>
 
 <script>
 (function(){
   "use strict";
-
-  var STORAGE_KEY = "mahjong_scoreboard_v8";
-  var ROOM_KEY = "mahjong_room_v1";
-  var NTFY_BASE = "https://ntfy.sh/";
+  var params = new URLSearchParams(location.search);
+  var ROOM = params.get("room");
+  var statusEl = document.getElementById("status");
   var RIICHI_VALUE = 4;
-  var RENCHAN_BONUS = 3;
-
-  var RON_NON_DEALER = [4, 8, 16, 32, 48, 64, 96, 128];
-  var RON_DEALER     = [6, 12, 24, 48, 72, 96, 144, 192];
-  var TSUMO_ND_PAY_ND = [1, 2, 4, 8, 12, 16, 24, 32];
-  var TSUMO_ND_PAY_D  = [2, 4, 8, 16, 24, 32, 48, 64];
-  var TSUMO_D_PAY     = [2, 4, 8, 16, 24, 32, 48, 64];
-  var TIER_NAMES = ["1翻", "2翻", "3翻", "满贯", "跳满", "倍满", "三倍满", "役满"];
   var AVATAR_COLORS = ["#4f46e5", "#0891b2", "#16a34a", "#db2777"];
+  var WINDS_CN = ["东", "南", "西", "北"];
+  var WINDS_EN = ["E", "S", "W", "N"];
 
-  // ===== 音效 + 语音模块（修复 iOS 同步问题） =====
-  var Sound = (function(){
-    var enabled = true;
-    var ctx = null;
-    var initialized = false;
-    var voices = [];
-    var jaVoice = null;
-    var zhVoice = null;
-    var ttsSupported = !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
-
-    function loadVoices(){
-      if (!ttsSupported) return;
-      try {
-        var list = window.speechSynthesis.getVoices() || [];
-        if (!list.length) return;
-        voices = list;
-        jaVoice = null;
-        zhVoice = null;
-        for (var i = 0; i < list.length; i++){
-          var v = list[i];
-          var lang = (v.lang || "").toLowerCase();
-          if (!jaVoice && lang.indexOf("ja") === 0) jaVoice = v;
-          if (!zhVoice && lang.indexOf("zh") === 0) zhVoice = v;
-        }
-      } catch(e){}
-    }
-
-    function init(){
-      if (initialized) return;
-      initialized = true;
-      try {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (AC) ctx = new AC();
-      } catch(e){}
-      if (ttsSupported){
-        loadVoices();
-        try {
-          if (typeof window.speechSynthesis.addEventListener === "function"){
-            window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
-          } else {
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-          }
-        } catch(e){}
-        // 轮询兜底：iOS 有时不触发 voiceschanged
-        var tries = 0;
-        var timer = setInterval(function(){
-          loadVoices();
-          tries++;
-          if ((jaVoice && zhVoice) || tries >= 24) clearInterval(timer);
-        }, 250);
-      }
-    }
-
-    function resume(){
-      if (ctx && ctx.state === "suspended"){
-        try { ctx.resume(); } catch(e){}
-      }
-      if (ttsSupported && window.speechSynthesis.paused){
-        try { window.speechSynthesis.resume(); } catch(e){}
-      }
-    }
-
-    function beep(freq, duration, type, vol){
-      if (!enabled) return;
-      init(); resume();
-      if (!ctx) return;
-      try {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = type || "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(vol || 0.15, ctx.currentTime + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
-      } catch(e){}
-    }
-
-    // 同步触发语音（必须在用户手势调用栈内）
-    function speak(text, fallbackText){
-      if (!enabled) return false;
-      if (!ttsSupported) return false;
-      try {
-        window.speechSynthesis.cancel();
-        var u = new SpeechSynthesisUtterance(text);
-        if (jaVoice){
-          u.voice = jaVoice;
-          u.lang = jaVoice.lang;
-        } else if (zhVoice && fallbackText){
-          // 没有日文语音，用中文语音读中文
-          u.text = fallbackText;
-          u.voice = zhVoice;
-          u.lang = zhVoice.lang;
-        } else {
-          u.lang = "ja-JP";
-        }
-        u.rate = 1.0;
-        u.pitch = 1.1;
-        u.volume = 1.0;
-        window.speechSynthesis.speak(u);
-        return true;
-      } catch(e){
-        return false;
-      }
-    }
-
-    function playSequence(notes, type, vol, interval){
-      notes.forEach(function(f, i){
-        setTimeout(function(){ beep(f, 0.2, type, vol); }, i * (interval || 80));
-      });
-    }
-
-    return {
-      setEnabled: function(v){ enabled = !!v; },
-      isEnabled: function(){ return enabled; },
-      init: init,
-      resume: resume,
-      speak: speak,
-      diagnose: function(){
-        var lines = [];
-        lines.push("speechSynthesis: " + (ttsSupported ? "✅ 可用" : "❌ 不可用"));
-        lines.push("SpeechSynthesisUtterance: " + (window.SpeechSynthesisUtterance ? "✅" : "❌"));
-        lines.push("AudioContext: " + ((window.AudioContext || window.webkitAudioContext) ? "✅" : "❌"));
-        if (ttsSupported){
-          var list = window.speechSynthesis.getVoices() || [];
-          lines.push("可用语音总数: " + list.length);
-          if (list.length === 0){
-            lines.push("⚠ 语音列表为空，请稍后重试或点击试听");
-          } else {
-            if (jaVoice) lines.push("日文语音: ✅ " + jaVoice.name + " (" + jaVoice.lang + ")");
-            else lines.push("日文语音: ❌ 未安装，将降级中文");
-            if (zhVoice) lines.push("中文语音: ✅ " + zhVoice.name + " (" + zhVoice.lang + ")");
-            else lines.push("中文语音: ❌ 未安装");
-            lines.push("前 8 个语音：");
-            for (var i = 0; i < Math.min(8, list.length); i++){
-              lines.push("  " + (i+1) + ". " + list[i].name + " [" + list[i].lang + "]");
-            }
-          }
-        }
-        return lines.join("\n");
-      },
-      riichi: function(){
-        init(); resume();
-        speak("リーチ", "立直");
-        beep(880, 0.12, "square", 0.12);
-        setTimeout(function(){ beep(1320, 0.22, "square", 0.12); }, 110);
-      },
-      win: function(isTsumo){
-        init(); resume();
-        if (isTsumo) speak("ツモ", "自摸");
-        else speak("ロン", "荣和");
-        playSequence([523, 659, 784, 1047], "sine", 0.15, 80);
-      },
-      draw: function(){
-        init(); resume();
-        beep(330, 0.18, "triangle", 0.1);
-        setTimeout(function(){ beep(262, 0.28, "triangle", 0.1); }, 140);
-      },
-      endMatch: function(){
-        init(); resume();
-        playSequence([523, 659, 784, 1047, 1319], "sine", 0.15, 100);
-      },
-      endDay: function(){
-        init(); resume();
-        playSequence([523, 659, 784, 1047, 784, 1047, 1319], "sine", 0.16, 120);
-      }
-    };
-  })();
-
-  var DEFAULT = {
-    settings: {
-      startPoints: 100, ratio: 1, headPrize: 10,
-      rankPrize: [15, 5, -5, -15], westGate: 110,
-      players: [
-        { name: "玩家1", priority: 1, avatar: "" },
-        { name: "玩家2", priority: 2, avatar: "" },
-        { name: "玩家3", priority: 3, avatar: "" },
-        { name: "玩家4", priority: 4, avatar: "" }
-      ]
-    },
-    records: [], carryover: 0,
-    current: { riichi: [false, false, false, false] },
-    gameEnded: false, endReason: "",
-    history: [], matchSaved: false,
-    dayEnded: false, daySummary: [], dayEndedAt: "",
-    soundEnabled: true
-  };
-
-  var state = load();
-  var ROOM = initRoom();
-  var publishTimer = null;
-  var currentMode = "ron";
-  var selectedWinners = [];
-  var selectedLoser = -1;
-  var tenpai = [false, false, false, false];
-  var renchanAuto = false;
-  var lastFocusedWinnerIdx = -1;
-
-  function normalizeSettings(s){
-    if (!s) return;
-    if (typeof s.startPoints !== "number") s.startPoints = 100;
-    if (typeof s.ratio !== "number" || s.ratio <= 0) s.ratio = 1;
-    if (typeof s.headPrize !== "number") s.headPrize = 10;
-    if (!Array.isArray(s.rankPrize)) s.rankPrize = [15, 5, -5, -15];
-    if (typeof s.westGate !== "number") s.westGate = 110;
-    if (!Array.isArray(s.players)) return;
-    s.players.forEach(function(p){ if (typeof p.avatar !== "string") p.avatar = ""; });
+  if (!ROOM){
+    statusEl.textContent = "缺少 room 参数，请用 display.html?room=房间号 打开";
+    statusEl.className = "status err";
+    return;
   }
 
-  function load(){
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw){
-        var keys = ["mahjong_scoreboard_v7","mahjong_scoreboard_v6","mahjong_scoreboard_v5",
-                    "mahjong_scoreboard_v4","mahjong_scoreboard_v3","mahjong_scoreboard_v2"];
-        for (var k = 0; k < keys.length; k++){
-          var oldRaw = localStorage.getItem(keys[k]);
-          if (oldRaw){
-            try {
-              var old = JSON.parse(oldRaw);
-              if (old.settings && old.records){
-                normalizeSettings(old.settings);
-                old.carryover = old.carryover || 0;
-                if (!old.current) old.current = { riichi: [false,false,false,false] };
-                old.gameEnded = false; old.endReason = "";
-                if (!Array.isArray(old.history)) old.history = [];
-                old.matchSaved = false;
-                old.dayEnded = false; old.daySummary = []; old.dayEndedAt = "";
-                if (typeof old.soundEnabled !== "boolean") old.soundEnabled = true;
-                Sound.setEnabled(old.soundEnabled);
-                return old;
-              }
-            } catch(e){}
-          }
-        }
-        Sound.setEnabled(true);
-        return JSON.parse(JSON.stringify(DEFAULT));
-      }
-      var data = JSON.parse(raw);
-      if (!data.settings || !data.records) return JSON.parse(JSON.stringify(DEFAULT));
-      normalizeSettings(data.settings);
-      if (typeof data.carryover !== "number") data.carryover = 0;
-      if (!data.current || !Array.isArray(data.current.riichi)){
-        data.current = { riichi: [false,false,false,false] };
-      }
-      if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
-      if (typeof data.endReason !== "string") data.endReason = "";
-      if (!Array.isArray(data.history)) data.history = [];
-      if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
-      if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
-      if (!Array.isArray(data.daySummary)) data.daySummary = [];
-      if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
-      if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
-      Sound.setEnabled(data.soundEnabled);
-      return data;
-    } catch(e){
-      Sound.setEnabled(true);
-      return JSON.parse(JSON.stringify(DEFAULT));
-    }
-  }
-
-  function initRoom(){
-    var params = new URLSearchParams(location.search);
-    var urlRoom = params.get("room");
-    var savedRoom = localStorage.getItem(ROOM_KEY) || "";
-    if (urlRoom){
-      localStorage.setItem(ROOM_KEY, urlRoom);
-      var url = new URL(location.href);
-      url.searchParams.delete("room");
-      history.replaceState(null, "", url.toString());
-      return urlRoom;
-    }
-    return savedRoom;
-  }
-
-  function save(){
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
-    schedulePublish();
-  }
-
-  function schedulePublish(){
-    if (!ROOM){ setSync("idle"); return; }
-    clearTimeout(publishTimer);
-    publishTimer = setTimeout(doPublish, 300);
-  }
-
-  function doPublish(){
-    if (!ROOM) return;
-    setSync("pending");
-    var c = compute();
-    var publishState = {
-      v: 8, settings: state.settings, pts: c.pts, current: state.current,
-      carryover: state.carryover, currentRound: c.currentRound,
-      renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
-      settle: c.settle, onTable: c.onTable,
-      gameEnded: state.gameEnded, endReason: state.endReason,
-      dayEnded: state.dayEnded, daySummary: state.daySummary || [],
-      dayEndedAt: state.dayEndedAt || ""
-    };
-    fetch(NTFY_BASE + encodeURIComponent(ROOM), {
-      method: "POST",
-      body: JSON.stringify(publishState)
-    }).then(function(r){ setSync(r.ok ? "ok" : "err"); })
-    .catch(function(){ setSync("err"); });
-  }
-
-  function setSync(s){
-    var el = document.getElementById("syncStatus");
-    if (!ROOM){ el.textContent = "● 未同步（点此设置）"; el.className = "sync idle"; }
-    else if (s === "ok"){ el.textContent = "● 已同步"; el.className = "sync ok"; }
-    else if (s === "err"){ el.textContent = "● 同步失败"; el.className = "sync err"; }
-    else if (s === "pending"){ el.textContent = "● 同步中…"; el.className = "sync pending"; }
-    else { el.textContent = "● 待同步"; el.className = "sync idle"; }
-  }
+  var NTFY = "https://ntfy.sh/" + encodeURIComponent(ROOM);
 
   function roundName(n){
     if (n <= 0) return "东1局";
@@ -668,1175 +125,171 @@ form.input.locked{opacity:.4;pointer-events:none}
     return "延长" + (n - 16) + "局";
   }
 
-  function getRenchanCount(){
-    var n = 0;
-    for (var i = state.records.length - 1; i >= 0; i--){
-      if (state.records[i].renchan === true) n++;
-      else break;
-    }
-    return n;
-  }
-
-  function hanToTier(han){
-    if (han <= 0) return 0;
-    if (han === 1) return 1;
-    if (han === 2) return 2;
-    if (han === 3) return 3;
-    if (han <= 5) return 4;
-    if (han <= 7) return 5;
-    if (han <= 10) return 6;
-    if (han <= 12) return 7;
-    return 8;
-  }
-
-  function computePoints(han, isDealerWin, isTsumo){
-    var tier = hanToTier(han);
-    if (tier === 0) return null;
-    var idx = tier - 1;
-    if (!isTsumo){
-      return { total: isDealerWin ? RON_DEALER[idx] : RON_NON_DEALER[idx], mode: "ron" };
-    }
-    if (isDealerWin){
-      var p = TSUMO_D_PAY[idx];
-      return { total: p * 3, each: p, mode: "tsumo-dealer" };
-    }
-    return {
-      total: TSUMO_ND_PAY_ND[idx] * 2 + TSUMO_ND_PAY_D[idx],
-      payNonDealer: TSUMO_ND_PAY_ND[idx],
-      payDealer: TSUMO_ND_PAY_D[idx],
-      mode: "tsumo-nonDealer"
-    };
-  }
-
-  function compute(){
-    var s = state.settings;
-    var pts = s.players.map(function(){ return s.startPoints; });
-    state.records.forEach(function(r){
-      for (var i = 0; i < 4; i++) pts[i] += (Number(r.changes[i]) || 0);
-    });
-    for (var i = 0; i < 4; i++){
-      if (state.current.riichi[i]) pts[i] -= RIICHI_VALUE;
-    }
-    var nonRenchan = 0;
-    state.records.forEach(function(r){ if (r.renchan !== true) nonRenchan++; });
-    var currentRound = nonRenchan + 1;
-    var renchan = getRenchanCount();
-    var dealerPriority = ((currentRound - 1) % 4) + 1;
-    var dealerIdx = -1;
-    s.players.forEach(function(p, i){ if (p.priority === dealerPriority) dealerIdx = i; });
-    var order = s.players.map(function(p, i){
-      return { i: i, pts: pts[i], prio: p.priority };
-    });
-    order.sort(function(a, b){
-      if (b.pts !== a.pts) return b.pts - a.pts;
-      return a.prio - b.prio;
-    });
-    var ranks = [0,0,0,0];
-    order.forEach(function(o, idx){ ranks[o.i] = idx + 1; });
-    var settle = pts.map(function(p, i){
-      var rank = ranks[i];
-      var head = rank === 1 ? s.headPrize * 3 : -s.headPrize;
-      var base = (p - s.startPoints) * s.ratio;
-      return Math.round(base + head + s.rankPrize[rank - 1]);
-    });
-    var riichiCount = state.current.riichi.filter(Boolean).length;
-    var onTable = state.carryover + riichiCount;
-    return {
-      pts: pts, currentRound: currentRound, renchan: renchan,
-      dealerPriority: dealerPriority, dealerIdx: dealerIdx,
-      ranks: ranks, settle: settle, onTable: onTable, riichiCount: riichiCount
-    };
-  }
-
-  function simulateAfter(changes){
-    var s = state.settings;
-    var pts = s.players.map(function(){ return s.startPoints; });
-    state.records.forEach(function(r){
-      for (var i = 0; i < 4; i++) pts[i] += (Number(r.changes[i]) || 0);
-    });
-    for (var i = 0; i < 4; i++) pts[i] += (Number(changes[i]) || 0);
-    var order = s.players.map(function(p, i){
-      return { i: i, pts: pts[i], prio: p.priority };
-    });
-    order.sort(function(a, b){
-      if (b.pts !== a.pts) return b.pts - a.pts;
-      return a.prio - b.prio;
-    });
-    var ranks = [0,0,0,0];
-    order.forEach(function(o, idx){ ranks[o.i] = idx + 1; });
-    return { pts: pts, ranks: ranks };
-  }
-
-  function getHeadWinner(winnerIdxs, loserIdx, players){
-    if (winnerIdxs.length === 0) return -1;
-    if (loserIdx < 0) return winnerIdxs[0];
-    var order = players.map(function(p, i){ return { i: i, prio: p.priority }; })
-      .sort(function(a, b){ return a.prio - b.prio; })
-      .map(function(o){ return o.i; });
-    var loserPos = order.indexOf(loserIdx);
-    if (loserPos < 0) return winnerIdxs[0];
-    for (var k = 1; k <= 4; k++){
-      var idx = order[(loserPos + k) % 4];
-      if (winnerIdxs.indexOf(idx) >= 0) return idx;
-    }
-    return winnerIdxs[0];
-  }
-
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, function(c){
       return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
     });
   }
 
-  function avatarInner(player, idx){
-    var a = (player.avatar || "").trim();
+  function avatarInner(p){
+    var a = (p.avatar || "").trim();
     if (/^https?:\/\//i.test(a)){
       return '<img src="' + escapeHtml(a) + '" alt="" onerror="this.style.display=\'none\'">';
     }
     if (a) return escapeHtml(a);
-    var ch = (player.name || "?").trim().charAt(0) || "?";
+    var ch = (p.name || "?").trim().charAt(0) || "?";
     return escapeHtml(ch);
   }
 
-  function avatarBg(player, idx){
-    return AVATAR_COLORS[idx % AVATAR_COLORS.length];
+  function formatDate(iso){
+    try {
+      var d = new Date(iso);
+      var m = d.getMonth()+1;
+      var dd = d.getDate();
+      var hh = String(d.getHours()).padStart(2,"0");
+      var mm = String(d.getMinutes()).padStart(2,"0");
+      return m + "月" + dd + "日 " + hh + ":" + mm;
+    } catch(e){ return ""; }
   }
 
-  function syncRenchanFromWinner(){
-    var c = compute();
-    var chk = document.getElementById("renchanChk");
-    var label = document.getElementById("renchanLabel");
-    var tag = document.getElementById("renchanAutoTag");
-    var autoValue = false;
-    var canAuto = false;
+  function renderNormal(d){
+    var ps = d.settings.players;
+    var current = d.current || { riichi: [false,false,false,false] };
+    var winds = d.winds || [];
 
-    if (currentMode === "draw"){
-      if (c.dealerIdx >= 0){ autoValue = tenpai[c.dealerIdx] === true; canAuto = true; }
-    } else if (selectedWinners.length > 0){
-      autoValue = selectedWinners.some(function(w){ return w.idx === c.dealerIdx; });
-      canAuto = true;
-    }
-
-    if (canAuto){
-      chk.checked = autoValue;
-      renchanAuto = true;
-      label.classList.add("auto");
-      tag.style.display = "inline";
-    } else {
-      renchanAuto = false;
-      label.classList.remove("auto");
-      tag.style.display = "none";
-    }
-  }
-
-  function computePreview(){
-    var changes = [0,0,0,0];
-    var notes = [];
-    var c = compute();
-    var n = getRenchanCount();
-    var s = state.settings;
-
-    if (currentMode === "draw"){
-      var tpCount = tenpai.filter(Boolean).length;
-      if (tpCount === 0 || tpCount === 4){ notes.push("全听或全不听，无罚符"); }
-      else if (tpCount === 1){
-        for (var i = 0; i < 4; i++) changes[i] = tenpai[i] ? 12 : -4;
-        notes.push("1听3不听：听牌者 +12，未听者各 −4");
-      } else if (tpCount === 2){
-        for (var i = 0; i < 4; i++) changes[i] = tenpai[i] ? 6 : -6;
-        notes.push("2听2不听：听牌者各 +6，未听者各 −6");
-      } else {
-        for (var i = 0; i < 4; i++) changes[i] = tenpai[i] ? 4 : -12;
-        notes.push("3听1不听：听牌者各 +4，未听者 −12");
-      }
-      for (var i = 0; i < 4; i++){ if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE; }
-      return { changes: changes, notes: notes };
-    }
-
-    var validWinners = selectedWinners.filter(function(w){ return w.han > 0; });
-    if (validWinners.length === 0){
-      for (var i = 0; i < 4; i++){ if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE; }
-      return { changes: changes, notes: [] };
-    }
-
-    var isTsumo = currentMode === "tsumo";
-    var headWinnerIdx = -1;
-
-    if (!isTsumo){
-      if (selectedLoser < 0 || selectedWinners.some(function(w){ return w.idx === selectedLoser; })){
-        for (var i = 0; i < 4; i++){ if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE; }
-        return { changes: changes, notes: ["请选择放铳者"] };
-      }
-      validWinners.forEach(function(w){
-        var isDealer = w.idx === c.dealerIdx;
-        var p = computePoints(w.han, isDealer, false);
-        if (!p) return;
-        changes[w.idx] += p.total;
-        changes[selectedLoser] -= p.total;
-        notes.push(s.players[w.idx].name + " " + TIER_NAMES[hanToTier(w.han) - 1] + "（" + p.total + "）");
-      });
-      if (validWinners.length > 1){
-        headWinnerIdx = getHeadWinner(validWinners.map(function(w){ return w.idx; }), selectedLoser, s.players);
-        notes.push("多家和：放铳者共付 " + validWinners.reduce(function(acc, w){
-          var p = computePoints(w.han, w.idx === c.dealerIdx, false);
-          return acc + (p ? p.total : 0);
-        }, 0));
-      } else {
-        headWinnerIdx = validWinners[0].idx;
-      }
-    } else {
-      if (validWinners.length > 1) validWinners = [validWinners[0]];
-      var w = validWinners[0];
-      var isDealerWin = w.idx === c.dealerIdx;
-      var p = computePoints(w.han, isDealerWin, true);
-      if (!p){
-        for (var i = 0; i < 4; i++){ if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE; }
-        return { changes: changes, notes: [] };
-      }
-      if (p.mode === "tsumo-dealer"){
-        for (var i = 0; i < 4; i++){
-          if (i === w.idx) changes[i] += p.total; else changes[i] -= p.each;
-        }
-        notes.push(TIER_NAMES[hanToTier(w.han) - 1] + "庄家自摸：每家 −" + p.each + "，赢家 +" + p.total);
-      } else {
-        for (var i = 0; i < 4; i++){
-          if (i === w.idx) changes[i] += p.total;
-          else if (i === c.dealerIdx) changes[i] -= p.payDealer;
-          else changes[i] -= p.payNonDealer;
-        }
-        notes.push(TIER_NAMES[hanToTier(w.han) - 1] + "闲家自摸：庄 −" + p.payDealer + "，闲各 −" + p.payNonDealer + "，赢家 +" + p.total);
-      }
-      headWinnerIdx = w.idx;
-    }
-
-    if (n > 0 && headWinnerIdx >= 0){
-      var bonus = n * RENCHAN_BONUS;
-      changes[headWinnerIdx] += bonus;
-      if (!isTsumo){
-        changes[selectedLoser] -= bonus;
-      } else {
-        var each = Math.round(bonus / 3);
-        for (var i = 0; i < 4; i++){ if (i !== headWinnerIdx) changes[i] -= each; }
-      }
-      notes.push("连庄" + n + "：头家 +" + bonus);
-    }
-
-    var riichiCount = state.current.riichi.filter(Boolean).length;
-    var onTable = state.carryover + riichiCount;
-    if (onTable > 0 && headWinnerIdx >= 0){
-      changes[headWinnerIdx] += onTable * RIICHI_VALUE;
-      notes.push("立直棒 +" + (onTable * RIICHI_VALUE) + "（" + s.players[headWinnerIdx].name + "）");
-    }
-
-    for (var i = 0; i < 4; i++){ if (state.current.riichi[i]) changes[i] -= RIICHI_VALUE; }
-
-    if (c.currentRound === 8 && selectedWinners.some(function(w){ return w.idx === c.dealerIdx; })){
-      var sim = simulateAfter(changes);
-      if (sim.ranks[c.dealerIdx] === 1) notes.push("⚠ 南4局庄家第一，按规则应结束比赛");
-      else notes.push("⚠ 南4局庄家不是第一，按规则必须连庄");
-    }
-
-    return { changes: changes, notes: notes };
-  }
-
-  function render(){
-    var c = compute();
-    var s = state.settings;
-
-    document.getElementById("roundName").textContent = roundName(c.currentRound);
-    document.getElementById("renchan").textContent = c.renchan;
+    document.getElementById("roundName").textContent = roundName(d.currentRound);
+    document.getElementById("renchan").textContent = d.renchan;
     document.getElementById("renchanBonus").textContent =
-      c.renchan > 0 ? "（+" + (RENCHAN_BONUS * c.renchan) + "）" : "";
-    document.getElementById("onTable").textContent = c.onTable;
+      d.renchan > 0 ? "（+3×" + d.renchan + "）" : "";
+    document.getElementById("onTable").textContent = d.onTable;
 
-    var totalCheck = c.pts.reduce(function(a,b){ return a+b; }, 0) + c.onTable * RIICHI_VALUE;
+    var totalCheck = d.pts.reduce(function(a,b){ return a+b; }, 0) + d.onTable * RIICHI_VALUE;
     var totalEl = document.getElementById("total");
     totalEl.textContent = totalCheck;
-    totalEl.style.color = totalCheck === s.startPoints * 4 ? "" : "#ef4444";
+    totalEl.style.color = totalCheck === d.settings.startPoints * 4 ? "" : "#ef4444";
 
-    var dealerIdx = c.dealerIdx;
-    document.getElementById("dealerName").textContent = dealerIdx >= 0 ? s.players[dealerIdx].name : "-";
+    document.getElementById("dealerName").textContent =
+      d.dealerIdx >= 0 ? ps[d.dealerIdx].name : "-";
 
     var banner = document.getElementById("endBanner");
-    if (state.gameEnded){
-      document.getElementById("endBannerText").textContent = "🏁 比赛结束：" + (state.endReason || "");
+    if (d.gameEnded){
+      banner.textContent = "🏁 比赛结束：" + (d.endReason || "");
       banner.classList.add("show");
     } else {
       banner.classList.remove("show");
     }
 
-    var dayBanner = document.getElementById("dayBanner");
-    if (state.dayEnded) dayBanner.classList.add("show");
-    else dayBanner.classList.remove("show");
-
-    var playersEl = document.getElementById("players");
-    playersEl.innerHTML = "";
-    s.players.forEach(function(p, i){
-      var div = document.createElement("div");
+    var grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    ps.forEach(function(p, i){
+      var card = document.createElement("div");
       var cls = "player";
-      if (i === dealerIdx) cls += " dealer";
-      if (state.current.riichi[i]) cls += " riichi";
-      div.className = cls;
-      var rankClass = c.ranks[i] === 1 ? "r1" : (c.ranks[i] === 4 ? "r4" : "");
-      var settleClass = c.settle[i] > 0 ? "pos" : (c.settle[i] < 0 ? "neg" : "");
-      var settleStr = (c.settle[i] > 0 ? "+" : "") + c.settle[i];
-      var ptsClass = c.pts[i] < 0 ? "pts neg" : "pts";
-      var riichiOn = state.current.riichi[i];
-      var avStyle = ' style="background:' + avatarBg(p, i) + '"';
+      if (i === d.dealerIdx) cls += " dealer";
+      if (current.riichi[i]) cls += " riichi";
+      card.className = cls;
 
-      div.innerHTML =
-        '<div class="player-top">' +
-          '<div class="player-left">' +
-            '<div class="avatar-sm"' + avStyle + '>' + avatarInner(p, i) + '</div>' +
-            '<span class="name">' + escapeHtml(p.name) + '</span>' +
-          '</div>' +
-          '<button type="button" class="riichi-btn' + (riichiOn ? ' on' : '') + '" data-idx="' + i + '">' +
-            (riichiOn ? '立直中' : '立直') +
-          '</button>' +
+      var rankClass = d.ranks[i] === 1 ? "r1" : (d.ranks[i] === 4 ? "r4" : "");
+      var settleClass = d.settle[i] > 0 ? "pos" : (d.settle[i] < 0 ? "neg" : "");
+      var settleStr = (d.settle[i] > 0 ? "+" : "") + d.settle[i];
+      var ptsClass = d.pts[i] < 0 ? "pts neg" : "pts";
+
+      var badges = "";
+      if (i === d.dealerIdx) badges += '<div class="badge dealer-badge">庄</div>';
+      if (current.riichi[i]) badges += '<div class="badge riichi-badge">立直</div>';
+
+      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
+      var windIdx = (typeof winds[i] === "number") ? winds[i] : -1;
+      var windHtml = windIdx >= 0
+        ? '<span class="wind-badge wind-' + WINDS_EN[windIdx] + '">' + WINDS_CN[windIdx] + '</span>'
+        : '';
+
+      card.innerHTML =
+        badges +
+        '<div class="top-row">' +
+          '<div class="avatar" style="background:' + avBg + '">' + avatarInner(p) + '</div>' +
+          '<span class="name">' + escapeHtml(p.name) + '</span>' +
+          windHtml +
         '</div>' +
-        '<div class="player-bottom">' +
-          '<span class="' + ptsClass + '">' + c.pts[i] + '</span>' +
-          '<span class="rank ' + rankClass + '">' + c.ranks[i] + '位</span>' +
+        '<div class="' + ptsClass + '">' + d.pts[i] + '</div>' +
+        '<div class="bottom-row">' +
+          '<span class="rank ' + rankClass + '">' + d.ranks[i] + '位</span>' +
           '<span class="settle ' + settleClass + '">' + settleStr + '</span>' +
         '</div>';
-      playersEl.appendChild(div);
+      grid.appendChild(card);
     });
+  }
 
-    renderWinnerBtns();
-    renderHanRows();
-    renderLoserBtns();
-    renderTenpaiBtns();
-    applyModeUI();
-    syncRenchanFromWinner();
-
-    var formEl = document.getElementById("form");
-    if (state.gameEnded || state.dayEnded) formEl.classList.add("locked");
-    else formEl.classList.remove("locked");
-
-    var endBtn = document.getElementById("btnEndDay");
-    if (state.dayEnded){
-      endBtn.textContent = "开新一天"; endBtn.classList.add("new-day");
-    } else {
-      endBtn.textContent = "完场"; endBtn.classList.remove("new-day");
-    }
-
-    var recEl = document.getElementById("records");
-    recEl.innerHTML = "";
-    var roundCounter = 1;
-    state.records.forEach(function(r, idx){
-      var thisRound = roundCounter;
-      if (r.renchan !== true) roundCounter++;
-      var winnersList = r.winners || (typeof r.winner === "number" && r.winner >= 0
-        ? [{ idx: r.winner, han: r.han }] : []);
-      var div = document.createElement("div");
-      div.className = "rec";
-      var chgStr = r.changes.map(function(v, i){
-        var nn = Number(v) || 0;
-        return s.players[i].name + (nn > 0 ? "+" : "") + nn;
-      }).join("  ");
-      var tags = "";
-      if (r.renchan === true) tags += '<span class="tag renchan">连庄</span>';
-      if (r.riichiCount > 0) tags += '<span class="tag riichi">立直×' + r.riichiCount + '</span>';
-      if (r.mode === "draw" || winnersList.length === 0) tags += '<span class="tag draw">流局</span>';
-      else {
-        winnersList.forEach(function(w){
-          if (typeof w.idx !== "number" || !s.players[w.idx]) return;
-          var tagCls = r.mode === "tsumo" ? 'tsumo' : 'win';
-          tags += '<span class="tag ' + tagCls + '">' + escapeHtml(s.players[w.idx].name) +
-            (r.mode === "tsumo" ? '自摸' : '和') + '</span>';
-          if (w.han > 0) tags += '<span class="tag han">' + w.han + '翻</span>';
-        });
-        if (winnersList.length > 1) tags += '<span class="tag multi">多家和</span>';
-      }
-      div.innerHTML =
-        '<div class="meta">' +
-          '<div><span class="round">' + roundName(thisRound) + '</span>' + tags + '</div>' +
-          '<div class="chg">' + escapeHtml(chgStr) + (r.note ? ' · ' + escapeHtml(r.note) : '') + '</div>' +
+  function renderDaySummary(d){
+    var list = d.daySummary || [];
+    document.getElementById("dsDate").textContent = d.dayEndedAt ? formatDate(d.dayEndedAt) : "";
+    var grid = document.getElementById("dsGrid");
+    grid.innerHTML = "";
+    list.forEach(function(sm, i){
+      var card = document.createElement("div");
+      var cls = "ds-card";
+      if (sm.rank === 1) cls += " rank1";
+      card.className = cls;
+      var settleCls = sm.totalSettle > 0 ? "pos" : (sm.totalSettle < 0 ? "neg" : "");
+      var sign = sm.totalSettle > 0 ? "+" : "";
+      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
+      var ranks = sm.ranks || [0,0,0,0];
+      card.innerHTML =
+        '<div class="ds-rank-badge">' + sm.rank + '位</div>' +
+        '<div class="ds-top">' +
+          '<div class="ds-avatar" style="background:' + avBg + '">' + avatarInner(sm) + '</div>' +
+          '<span class="ds-name">' + escapeHtml(sm.name) + '</span>' +
         '</div>' +
-        '<button data-del="' + idx + '">删除</button>';
-      recEl.appendChild(div);
-    });
-
-    recEl.querySelectorAll("button[data-del]").forEach(function(btn){
-      btn.addEventListener("click", function(){
-        var i = Number(btn.getAttribute("data-del"));
-        var wasSaved = state.matchSaved && state.history && state.history.length > 0;
-        var msg = wasSaved ? "删除这条记录？已保存的战绩也会被移除。" : "删除这条记录？";
-        if (!confirm(msg)) return;
-        state.records.splice(i, 1);
-        if (wasSaved){ state.history.shift(); state.matchSaved = false; }
-        state.carryover = recalcCarryover();
-        recheckGameEnd();
-        maybeSaveMatch();
-        save(); render();
-      });
-    });
-
-    updatePreview();
-  }
-
-  function recalcCarryover(){
-    var co = 0;
-    state.records.forEach(function(r){
-      var hasWinner = (r.winners && r.winners.length > 0) ||
-        (typeof r.winner === "number" && r.winner >= 0);
-      if (r.mode === "draw" || !hasWinner) co += (r.riichiCount || 0);
-      else co = 0;
-    });
-    return co;
-  }
-
-  function recheckGameEnd(){
-    var s = state.settings;
-    var c = compute();
-    state.gameEnded = false;
-    state.endReason = "";
-    for (var i = 0; i < 4; i++){
-      if (c.pts[i] <= 0){
-        state.gameEnded = true;
-        state.endReason = s.players[i].name + " 被飞";
-        return;
-      }
-    }
-    if (c.currentRound > 8){
-      for (var i = 0; i < 4; i++){
-        if (c.pts[i] >= s.westGate){
-          state.gameEnded = true;
-          state.endReason = s.players[i].name + " 达到 " + s.westGate;
-          return;
-        }
-      }
-      return;
-    }
-    if (c.currentRound < 8) return;
-    if (c.currentRound === 9){
-      var allBelow = c.pts.every(function(p){ return p < s.westGate; });
-      if (allBelow) return;
-      state.gameEnded = true;
-      state.endReason = "南4局结束，有人达到 " + s.westGate;
-    }
-  }
-
-  function saveMatchToHistory(){
-    if (state.matchSaved) return;
-    if (!state.gameEnded) return;
-    var c = compute();
-    var match = {
-      id: Date.now(),
-      endedAt: new Date().toISOString(),
-      reason: state.endReason || "比赛结束",
-      settings: JSON.parse(JSON.stringify(state.settings)),
-      players: state.settings.players.map(function(p, i){
-        return { name: p.name, avatar: p.avatar || "", pts: c.pts[i], settle: c.settle[i], rank: c.ranks[i] };
-      }),
-      records: JSON.parse(JSON.stringify(state.records))
-    };
-    if (!state.history) state.history = [];
-    state.history.unshift(match);
-    if (state.history.length > 50) state.history = state.history.slice(0, 50);
-    state.matchSaved = true;
-  }
-
-  function maybeSaveMatch(){
-    if (state.gameEnded && !state.matchSaved) saveMatchToHistory();
-  }
-
-  function startNewMatch(){
-    if (state.records.length === 0 && !state.gameEnded){
-      alert("当前没有进行中的对局");
-      return;
-    }
-    if (!confirm("开始新一场？当前对局记录将清空（战绩已保存到历史）。")) return;
-    state.records = []; state.carryover = 0;
-    state.current = { riichi: [false, false, false, false] };
-    state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
-    selectedWinners = []; selectedLoser = -1;
-    tenpai = [false, false, false, false];
-    renchanAuto = false; lastFocusedWinnerIdx = -1;
-    document.getElementById("note").value = "";
-    document.getElementById("renchanChk").checked = false;
-    document.getElementById("renchanLabel").classList.remove("auto");
-    document.getElementById("renchanAutoTag").style.display = "none";
-    save(); render();
-  }
-
-  function computeDaySummary(){
-    var s = state.settings;
-    var summary = s.players.map(function(p){
-      return { name: p.name, avatar: p.avatar || "", totalSettle: 0, totalPts: 0, matches: 0, ranks: [0,0,0,0] };
-    });
-    state.history.forEach(function(match){
-      (match.players || []).forEach(function(mp, mi){
-        if (mi >= 4) return;
-        summary[mi].totalSettle += (Number(mp.settle) || 0);
-        summary[mi].totalPts += (Number(mp.pts) || 0);
-        summary[mi].matches += 1;
-        if (mp.rank >= 1 && mp.rank <= 4) summary[mi].ranks[mp.rank - 1]++;
-      });
-    });
-    var indexed = summary.map(function(x, i){ return { x: x, i: i }; });
-    indexed.sort(function(a, b){
-      if (b.x.totalSettle !== a.x.totalSettle) return b.x.totalSettle - a.x.totalSettle;
-      return a.i - b.i;
-    });
-    return indexed.map(function(o, rank){ o.x.rank = rank + 1; return o.x; });
-  }
-
-  function endDay(){
-    if (state.dayEnded){ startNewDay(); return; }
-    if (state.records.length > 0 && !state.gameEnded){
-      if (!confirm("当前对局尚未结束，是否将其作为一场比赛结算并完场？")) return;
-      state.gameEnded = true;
-      state.endReason = state.endReason || "手动完场";
-      saveMatchToHistory();
-    } else if (state.records.length > 0 && state.gameEnded && !state.matchSaved){
-      saveMatchToHistory();
-    }
-    if (state.history.length === 0){
-      alert("还没有任何已完成的比赛，无法完场。");
-      return;
-    }
-    if (!confirm("确认完场？将汇总今日全部 " + state.history.length + " 场比赛。")) return;
-    Sound.endDay();
-    state.daySummary = computeDaySummary();
-    state.dayEnded = true;
-    state.dayEndedAt = new Date().toISOString();
-    save(); render(); schedulePublish(); openDaySummary();
-  }
-
-  function startNewDay(){
-    if (!confirm("开新一天？将清空今日所有战绩和当前对局。建议先点“导出”备份数据。")) return;
-    state.records = []; state.carryover = 0;
-    state.current = { riichi: [false, false, false, false] };
-    state.gameEnded = false; state.endReason = ""; state.matchSaved = false;
-    state.history = []; state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
-    selectedWinners = []; selectedLoser = -1;
-    tenpai = [false, false, false, false];
-    renchanAuto = false; lastFocusedWinnerIdx = -1;
-    document.getElementById("note").value = "";
-    document.getElementById("renchanChk").checked = false;
-    document.getElementById("renchanLabel").classList.remove("auto");
-    document.getElementById("renchanAutoTag").style.display = "none";
-    document.getElementById("daySummaryModal").classList.remove("open");
-    save(); render();
-  }
-
-  function formatMatchTime(iso){
-    try {
-      var d = new Date(iso);
-      var y = d.getFullYear();
-      var m = String(d.getMonth()+1).padStart(2,"0");
-      var dd = String(d.getDate()).padStart(2,"0");
-      var hh = String(d.getHours()).padStart(2,"0");
-      var mm = String(d.getMinutes()).padStart(2,"0");
-      return y + "-" + m + "-" + dd + " " + hh + ":" + mm;
-    } catch(e){ return iso; }
-  }
-
-  function openDaySummary(){
-    var modal = document.getElementById("daySummaryModal");
-    var list = document.getElementById("daySummaryList");
-    var dateEl = document.getElementById("daySummaryDate");
-    list.innerHTML = "";
-    if (state.dayEndedAt){
-      dateEl.textContent = "完场时间：" + formatMatchTime(state.dayEndedAt) +
-        " · 共 " + state.history.length + " 场";
-    } else dateEl.textContent = "";
-    if (!state.daySummary || state.daySummary.length === 0){
-      list.innerHTML = '<div class="history-empty">暂无数据</div>';
-    } else {
-      state.daySummary.forEach(function(sm){
-        var div = document.createElement("div");
-        div.className = "ds-row" + (sm.rank === 1 ? " rank1" : "");
-        var settleCls = sm.totalSettle > 0 ? "pos" : (sm.totalSettle < 0 ? "neg" : "");
-        var sign = sm.totalSettle > 0 ? "+" : "";
-        var stats = sm.matches + "场";
-        if (sm.matches > 0){
-          stats += " · " + sm.ranks[0] + "/" + sm.ranks[1] + "/" + sm.ranks[2] + "/" + sm.ranks[3];
-        }
-        div.innerHTML =
-          '<div class="ds-rank">' + sm.rank + '</div>' +
-          '<div class="ds-info">' +
-            '<div class="ds-name">' + escapeHtml(sm.name) + '</div>' +
-            '<div class="ds-stats">' + escapeHtml(stats) + '</div>' +
-          '</div>' +
-          '<div class="ds-total ' + settleCls + '">' + sign + sm.totalSettle + '</div>';
-        list.appendChild(div);
-      });
-    }
-    modal.classList.add("open");
-  }
-
-  function openHistory(){
-    var modal = document.getElementById("historyModal");
-    var list = document.getElementById("historyList");
-    list.innerHTML = "";
-    if (!state.history || state.history.length === 0){
-      list.innerHTML = '<div class="history-empty">暂无历史战绩</div>';
-    } else {
-      state.history.forEach(function(m){
-        var div = document.createElement("div");
-        div.className = "history-item";
-        var head = '<div class="hi-head"><span>' + escapeHtml(formatMatchTime(m.endedAt)) +
-          '</span><span class="hi-reason">' + escapeHtml(m.reason) + '</span></div>';
-        var playersHtml = (m.players || []).slice().sort(function(a, b){
-          return a.rank - b.rank;
-        }).map(function(p){
-          var cls = p.rank === 1 ? "hi-rank1" : "";
-          var settleCls = p.settle > 0 ? "hi-settle-pos" : "hi-settle-neg";
-          var sign = p.settle > 0 ? "+" : "";
-          return '<div class="hi-player ' + cls + '">' +
-            '<span>' + p.rank + '位 ' + escapeHtml(p.name) + '</span>' +
-            '<span>' + p.pts + ' <b class="' + settleCls + '">' + sign + p.settle + '</b></span>' +
-            '</div>';
-        }).join("");
-        div.innerHTML = head + playersHtml;
-        list.appendChild(div);
-      });
-    }
-    modal.classList.add("open");
-  }
-
-  function renderWinnerBtns(){
-    var el = document.getElementById("winnerBtns");
-    el.innerHTML = "";
-    var s = state.settings;
-    var multi = currentMode === "ron";
-    s.players.forEach(function(p, i){
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = p.name;
-      btn.setAttribute("data-winner", i);
-      if (selectedWinners.some(function(w){ return w.idx === i; })){
-        btn.className = multi ? "multi-active" : "active";
-      }
-      el.appendChild(btn);
-    });
-    document.getElementById("winnerLabel").textContent = multi ? "赢家(多选)" : "赢家";
-  }
-
-  function renderHanRows(){
-    var el = document.getElementById("hanRows");
-    el.innerHTML = "";
-    var s = state.settings;
-    selectedWinners.forEach(function(w){
-      var p = s.players[w.idx];
-      var row = document.createElement("div");
-      row.className = "han-row";
-      var tierText = w.han > 0 ? TIER_NAMES[hanToTier(w.han) - 1] : "—";
-      row.innerHTML =
-        '<span class="han-name">' + escapeHtml(p.name) + '</span>' +
-        '<input type="number" data-hidx="' + w.idx + '" value="' + (w.han > 0 ? w.han : "") +
-        '" placeholder="翻数" min="1" max="99" inputmode="numeric">' +
-        '<span class="tier-mini" data-htier="' + w.idx + '">' + tierText + '</span>';
-      el.appendChild(row);
-    });
-    if (selectedWinners.length === 0){
-      el.innerHTML = '<div class="han-row" style="justify-content:center;color:var(--muted);font-size:11px">选择赢家后在此输入翻数</div>';
-    }
-  }
-
-  function renderLoserBtns(){
-    var el = document.getElementById("loserBtns");
-    el.innerHTML = "";
-    var s = state.settings;
-    s.players.forEach(function(p, i){
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = p.name;
-      btn.setAttribute("data-loser", i);
-      if (i === selectedLoser) btn.className = "active";
-      if (selectedWinners.some(function(w){ return w.idx === i; })) btn.disabled = true;
-      el.appendChild(btn);
-    });
-  }
-
-  function renderTenpaiBtns(){
-    var el = document.getElementById("tenpaiBtns");
-    el.innerHTML = "";
-    var s = state.settings;
-    s.players.forEach(function(p, i){
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = p.name;
-      btn.setAttribute("data-tenpai", i);
-      if (tenpai[i]) btn.className = "active";
-      el.appendChild(btn);
-    });
-  }
-
-  function applyModeUI(){
-    var winArea = document.getElementById("winArea");
-    var drawArea = document.getElementById("drawArea");
-    var loserLine = document.getElementById("loserLine");
-    var hanQuick = document.getElementById("hanQuick");
-    if (currentMode === "draw"){
-      winArea.style.display = "none";
-      drawArea.style.display = "block";
-    } else {
-      winArea.style.display = "block";
-      drawArea.style.display = "none";
-      loserLine.style.display = currentMode === "ron" ? "flex" : "none";
-      hanQuick.style.display = selectedWinners.length > 0 ? "grid" : "none";
-    }
-  }
-
-  function updatePreview(){
-    var el = document.getElementById("preview");
-    var pv = computePreview();
-    var s = state.settings;
-    var html = "";
-    if (pv.notes && pv.notes.length){
-      pv.notes.forEach(function(n){
-        var cls = n.indexOf("⚠") >= 0 ? "pv-note" : "pv-tag";
-        html += '<div class="pv-row"><span class="' + cls + '">' + escapeHtml(n) + '</span></div>';
-      });
-    }
-    var allZero = pv.changes.every(function(v){ return v === 0; });
-    if (!allZero){
-      s.players.forEach(function(p, i){
-        var v = pv.changes[i];
-        if (v === 0) return;
-        var cls = v > 0 ? "pv-pos" : "pv-neg";
-        var sign = v > 0 ? "+" : "";
-        html += '<div class="pv-row"><span>' + escapeHtml(p.name) + '</span><b class="' + cls + '">' + sign + v + '</b></div>';
-      });
-    }
-    el.innerHTML = html || '<span class="pv-tag">选择赢家、放铳者和翻数后显示预览</span>';
-  }
-
-  document.getElementById("modeTabs").addEventListener("click", function(e){
-    var btn = e.target.closest("button[data-mode]");
-    if (!btn) return;
-    currentMode = btn.getAttribute("data-mode");
-    if (currentMode === "tsumo" && selectedWinners.length > 1){
-      selectedWinners = [selectedWinners[0]];
-    }
-    document.querySelectorAll("#modeTabs button").forEach(function(b){
-      b.className = b.getAttribute("data-mode") === currentMode ? "active" : "";
-    });
-    applyModeUI();
-    renderWinnerBtns();
-    renderHanRows();
-    renderLoserBtns();
-    syncRenchanFromWinner();
-    updatePreview();
-  });
-
-  document.getElementById("winnerBtns").addEventListener("click", function(e){
-    var btn = e.target.closest("button[data-winner]");
-    if (!btn) return;
-    Sound.resume();
-    var idx = Number(btn.getAttribute("data-winner"));
-    var existing = selectedWinners.findIndex(function(w){ return w.idx === idx; });
-
-    if (currentMode === "tsumo"){
-      if (existing >= 0) selectedWinners = [];
-      else selectedWinners = [{ idx: idx, han: 0 }];
-    } else {
-      if (existing >= 0) selectedWinners.splice(existing, 1);
-      else {
-        if (idx === selectedLoser) selectedLoser = -1;
-        selectedWinners.push({ idx: idx, han: 0 });
-      }
-    }
-    if (selectedWinners.length === 1) lastFocusedWinnerIdx = selectedWinners[0].idx;
-
-    renderWinnerBtns();
-    renderHanRows();
-    renderLoserBtns();
-    applyModeUI();
-    syncRenchanFromWinner();
-    updatePreview();
-  });
-
-  document.getElementById("hanRows").addEventListener("input", function(e){
-    var inp = e.target;
-    if (!inp.hasAttribute("data-hidx")) return;
-    var idx = Number(inp.getAttribute("data-hidx"));
-    var w = selectedWinners.find(function(x){ return x.idx === idx; });
-    if (w){
-      w.han = parseInt(inp.value, 10) || 0;
-      var tierEl = document.querySelector('[data-htier="' + idx + '"]');
-      if (tierEl) tierEl.textContent = w.han > 0 ? TIER_NAMES[hanToTier(w.han) - 1] : "—";
-    }
-    updatePreview();
-  });
-
-  document.getElementById("hanRows").addEventListener("focusin", function(e){
-    if (e.target.hasAttribute("data-hidx")){
-      lastFocusedWinnerIdx = Number(e.target.getAttribute("data-hidx"));
-    }
-  });
-
-  document.getElementById("loserBtns").addEventListener("click", function(e){
-    var btn = e.target.closest("button[data-loser]");
-    if (!btn || btn.disabled) return;
-    Sound.resume();
-    selectedLoser = Number(btn.getAttribute("data-loser"));
-    renderLoserBtns();
-    updatePreview();
-  });
-
-  document.getElementById("tenpaiBtns").addEventListener("click", function(e){
-    var btn = e.target.closest("button[data-tenpai]");
-    if (!btn) return;
-    var i = Number(btn.getAttribute("data-tenpai"));
-    tenpai[i] = !tenpai[i];
-    renderTenpaiBtns();
-    syncRenchanFromWinner();
-    updatePreview();
-  });
-
-  document.getElementById("renchanChk").addEventListener("change", function(){
-    var label = document.getElementById("renchanLabel");
-    var tag = document.getElementById("renchanAutoTag");
-    if (renchanAuto){
-      label.classList.remove("auto");
-      tag.style.display = "none";
-      renchanAuto = false;
-    }
-  });
-
-  document.getElementById("hanQuick").addEventListener("click", function(e){
-    var btn = e.target.closest("button[data-han]");
-    if (!btn) return;
-    var hanVal = btn.getAttribute("data-han");
-    var targetIdx = lastFocusedWinnerIdx;
-    if (targetIdx < 0 || !selectedWinners.some(function(w){ return w.idx === targetIdx; })){
-      targetIdx = selectedWinners.length > 0 ? selectedWinners[0].idx : -1;
-    }
-    if (targetIdx < 0) return;
-    var w = selectedWinners.find(function(x){ return x.idx === targetIdx; });
-    if (!w) return;
-    w.han = parseInt(hanVal, 10);
-    var inp = document.querySelector('[data-hidx="' + targetIdx + '"]');
-    if (inp) inp.value = w.han;
-    var tierEl = document.querySelector('[data-htier="' + targetIdx + '"]');
-    if (tierEl) tierEl.textContent = TIER_NAMES[hanToTier(w.han) - 1];
-    updatePreview();
-  });
-
-  document.getElementById("players").addEventListener("click", function(e){
-    var btn = e.target.closest(".riichi-btn");
-    if (!btn) return;
-    var idx = Number(btn.getAttribute("data-idx"));
-    Sound.resume();
-    var wasOn = state.current.riichi[idx];
-    state.current.riichi[idx] = !wasOn;
-    if (!wasOn) Sound.riichi();
-    save();
-    render();
-  });
-
-  document.getElementById("form").addEventListener("submit", function(e){
-    e.preventDefault();
-    if (state.dayEnded){ alert("今日已完场，请点“开新一天”后再继续"); return; }
-    if (state.gameEnded){ alert("比赛已结束，请点“开新一场”或撤销后再继续"); return; }
-    var pv = computePreview();
-    var changes = pv.changes;
-    var riichiCount = state.current.riichi.filter(Boolean).length;
-    var c = compute();
-
-    var winnersForRecord = [];
-    if (currentMode !== "draw"){
-      if (selectedWinners.length === 0){ alert("请选择赢家"); return; }
-      if (selectedWinners.some(function(w){ return w.han <= 0; })){ alert("请输入所有赢家的翻数"); return; }
-      if (currentMode === "ron" && selectedLoser < 0){ alert("请选择放铳者"); return; }
-      winnersForRecord = selectedWinners.slice();
-    }
-
-    var renchan = document.getElementById("renchanChk").checked;
-
-    var sim = null;
-    if (c.currentRound === 8 && currentMode !== "draw" &&
-        selectedWinners.some(function(w){ return w.idx === c.dealerIdx; })){
-      sim = simulateAfter(changes);
-      if (sim.ranks[c.dealerIdx] === 1) renchan = false;
-      else renchan = true;
-    }
-
-    if (currentMode === "draw") state.carryover += riichiCount;
-    else state.carryover = 0;
-
-    var note = document.getElementById("note").value.trim();
-    var record = {
-      mode: currentMode, changes: changes, renchan: renchan, note: note,
-      losers: currentMode === "ron" ? [selectedLoser] : [],
-      winners: winnersForRecord, riichiCount: riichiCount, tenpai: tenpai.slice()
-    };
-    record.winner = winnersForRecord.length > 0 ? winnersForRecord[0].idx : -1;
-    record.han = winnersForRecord.length > 0 ? winnersForRecord[0].han : 0;
-
-    Sound.resume();
-    if (currentMode === "draw") Sound.draw();
-    else Sound.win(currentMode === "tsumo");
-
-    state.records.push(record);
-    state.current.riichi = [false, false, false, false];
-
-    var nc = compute();
-    var s = state.settings;
-    state.gameEnded = false;
-    state.endReason = "";
-
-    var flown = -1;
-    for (var i = 0; i < 4; i++) if (nc.pts[i] <= 0) { flown = i; break; }
-    if (flown >= 0){
-      state.gameEnded = true;
-      state.endReason = s.players[flown].name + " 被飞";
-    } else if (c.currentRound === 8 && currentMode !== "draw" &&
-               selectedWinners.some(function(w){ return w.idx === c.dealerIdx; })){
-      if (sim && sim.ranks[c.dealerIdx] === 1){
-        state.gameEnded = true;
-        state.endReason = "南4局庄家第一，终局";
-      }
-    } else if (c.currentRound === 8){
-      var allBelow = nc.pts.every(function(p){ return p < s.westGate; });
-      if (!allBelow){
-        state.gameEnded = true;
-        state.endReason = "南4局结束，有人达到 " + s.westGate;
-      }
-    } else if (nc.currentRound > 8){
-      for (var i = 0; i < 4; i++){
-        if (nc.pts[i] >= s.westGate){
-          state.gameEnded = true;
-          state.endReason = s.players[i].name + " 达到 " + s.westGate;
-          break;
-        }
-      }
-    }
-
-    maybeSaveMatch();
-    if (state.gameEnded){
-      setTimeout(function(){ Sound.endMatch(); }, 800);
-    }
-
-    selectedWinners = []; selectedLoser = -1;
-    tenpai = [false, false, false, false];
-    renchanAuto = false; lastFocusedWinnerIdx = -1;
-    document.getElementById("renchanChk").checked = false;
-    document.getElementById("renchanLabel").classList.remove("auto");
-    document.getElementById("renchanAutoTag").style.display = "none";
-    document.getElementById("note").value = "";
-    document.querySelectorAll("#hanQuick button").forEach(function(b){ b.className = ""; });
-
-    save(); render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
-
-  document.getElementById("btnUndo").addEventListener("click", function(){
-    if (state.dayEnded){ alert("今日已完场，请先点“开新一天”"); return; }
-    if (state.records.length === 0) return;
-    var wasSaved = state.matchSaved && state.history && state.history.length > 0;
-    var msg = wasSaved ? "撤销最后一局？已保存的战绩也会被移除。" : "撤销最后一局？";
-    if (!confirm(msg)) return;
-    state.records.pop();
-    if (wasSaved){ state.history.shift(); state.matchSaved = false; }
-    state.carryover = recalcCarryover();
-    state.current.riichi = [false, false, false, false];
-    recheckGameEnd();
-    maybeSaveMatch();
-    save(); render();
-  });
-
-  document.getElementById("btnEndDay").addEventListener("click", endDay);
-  document.getElementById("btnHistory").addEventListener("click", openHistory);
-  document.getElementById("btnCloseHistory").addEventListener("click", function(){
-    document.getElementById("historyModal").classList.remove("open");
-  });
-  document.getElementById("btnStartNewMatch").addEventListener("click", startNewMatch);
-  document.getElementById("btnShowDaySummary").addEventListener("click", openDaySummary);
-  document.getElementById("btnCloseDaySummary").addEventListener("click", function(){
-    document.getElementById("daySummaryModal").classList.remove("open");
-  });
-  document.getElementById("btnNewDayFromSummary").addEventListener("click", startNewDay);
-
-  document.getElementById("btnTestSound").addEventListener("click", function(){
-    Sound.resume();
-    Sound.riichi();
-    setTimeout(function(){ Sound.win(false); }, 1500);
-    setTimeout(function(){ Sound.endDay(); }, 3000);
-  });
-
-  document.getElementById("btnDiagSound").addEventListener("click", function(){
-    Sound.init();
-    // 主动触发一次 voices 加载
-    try {
-      if (window.speechSynthesis) window.speechSynthesis.getVoices();
-    } catch(e){}
-    var box = document.getElementById("diagBox");
-    box.style.display = "block";
-    box.textContent = "检测中…（如果语音列表为空，请等 1 秒后再点一次）\n\n" + Sound.diagnose();
-  });
-
-  document.getElementById("btnExport").addEventListener("click", function(){
-    var data = JSON.stringify(state, null, 2);
-    var blob = new Blob([data], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "mahjong_" + new Date().toISOString().slice(0,10) + ".json";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
-
-  document.getElementById("btnImport").addEventListener("click", function(){
-    var input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json,.json";
-    input.addEventListener("change", function(){
-      var file = input.files[0];
-      if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function(){
-        try {
-          var data = JSON.parse(reader.result);
-          if (!data.settings || !data.records) throw new Error("格式不对");
-          if (!confirm("导入会覆盖当前数据，继续？")) return;
-          normalizeSettings(data.settings);
-          if (typeof data.carryover !== "number") data.carryover = 0;
-          if (!data.current) data.current = { riichi: [false,false,false,false] };
-          if (typeof data.gameEnded !== "boolean") data.gameEnded = false;
-          if (typeof data.endReason !== "string") data.endReason = "";
-          if (!Array.isArray(data.history)) data.history = [];
-          if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
-          if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
-          if (!Array.isArray(data.daySummary)) data.daySummary = [];
-          if (typeof data.dayEndedAt !== "string") data.dayEndedAt = "";
-          if (typeof data.soundEnabled !== "boolean") data.soundEnabled = true;
-          state = data;
-          Sound.setEnabled(state.soundEnabled);
-          recheckGameEnd();
-          maybeSaveMatch();
-          save(); render();
-        } catch(err){ alert("导入失败：" + err.message); }
-      };
-      reader.readAsText(file);
-    });
-    input.click();
-  });
-
-  var modal = document.getElementById("settingsModal");
-
-  function openSettings(){
-    var s = state.settings;
-    document.getElementById("setRoom").value = ROOM || "";
-    document.getElementById("setSoundEnabled").checked = state.soundEnabled !== false;
-    document.getElementById("setStart").value = s.startPoints;
-    document.getElementById("setRatio").value = s.ratio;
-    document.getElementById("setHeadPrize").value = s.headPrize;
-    document.getElementById("setWestGate").value = s.westGate;
-    document.getElementById("setRank1").value = s.rankPrize[0];
-    document.getElementById("setRank2").value = s.rankPrize[1];
-    document.getElementById("setRank3").value = s.rankPrize[2];
-    document.getElementById("setRank4").value = s.rankPrize[3];
-    var pf = document.getElementById("playerFields");
-    pf.innerHTML = "";
-    s.players.forEach(function(p, i){
-      var block = document.createElement("div");
-      block.className = "player-settings-block";
-      block.innerHTML =
-        '<div class="grid2">' +
-          '<div class="field"><label>玩家' + (i+1) + '名</label>' +
-          '<input type="text" data-pname="' + i + '" value="' + escapeHtml(p.name) + '"></div>' +
-          '<div class="field"><label>起家优先</label>' +
-          '<input type="number" data-pprio="' + i + '" value="' + p.priority + '"></div>' +
-        '</div>' +
-        '<div class="field" style="margin-bottom:0"><label>头像（emoji 或图片 URL）</label>' +
-        '<input type="text" data-pavatar="' + i + '" value="' + escapeHtml(p.avatar || "") + '" placeholder="例如 🐱 或 https://...">' +
-        '</div>' +
-        '<div class="avatar-preview">' +
-          '<div class="avatar-sm" data-avpreview="' + i + '" style="background:' + avatarBg(p, i) + '">' + avatarInner(p, i) + '</div>' +
-          '<span class="preview-text">预览</span>' +
+        '<div class="ds-total ' + settleCls + '">' + sign + sm.totalSettle + '</div>' +
+        '<div class="ds-bottom">' +
+          '<span class="ds-stats"><b>' + sm.matches + '</b>场 · <b>' + ranks[0] + '</b>次一位</span>' +
+          '<span class="ds-stats">' + ranks[0] + '/' + ranks[1] + '/' + ranks[2] + '/' + ranks[3] + '</span>' +
         '</div>';
-      pf.appendChild(block);
+      grid.appendChild(card);
     });
-    document.getElementById("diagBox").style.display = "none";
-    modal.classList.add("open");
-    // 打开设置时预热语音引擎
-    Sound.init();
   }
 
-  document.getElementById("btnSettings").addEventListener("click", openSettings);
-  document.getElementById("syncStatus").addEventListener("click", openSettings);
-
-  document.getElementById("btnCancelSettings").addEventListener("click", function(){
-    modal.classList.remove("open");
-  });
-
-  modal.addEventListener("click", function(e){
-    if (e.target === modal) modal.classList.remove("open");
-  });
-
-  modal.addEventListener("input", function(e){
-    var t = e.target;
-    if (t.hasAttribute("data-pavatar") || t.hasAttribute("data-pname")){
-      var i = Number(t.getAttribute("data-pavatar") || t.getAttribute("data-pname"));
-      var nameInp = modal.querySelector('[data-pname="' + i + '"]');
-      var avInp = modal.querySelector('[data-pavatar="' + i + '"]');
-      var fakePlayer = { name: nameInp ? nameInp.value : "", avatar: avInp ? avInp.value : "" };
-      var pvEl = modal.querySelector('[data-avpreview="' + i + '"]');
-      if (pvEl){
-        pvEl.style.background = avatarBg(fakePlayer, i);
-        pvEl.innerHTML = avatarInner(fakePlayer, i);
-      }
+  function render(d){
+    var dayEl = document.getElementById("daySummary");
+    var gridEl = document.getElementById("grid");
+    var banner = document.getElementById("endBanner");
+    if (d.dayEnded && d.daySummary && d.daySummary.length > 0){
+      gridEl.style.display = "none";
+      banner.classList.remove("show");
+      dayEl.classList.add("show");
+      document.getElementById("roundName").textContent = "已完场";
+      document.getElementById("renchan").textContent = "—";
+      document.getElementById("renchanBonus").textContent = "";
+      document.getElementById("onTable").textContent = "—";
+      document.getElementById("dealerName").textContent = "—";
+      document.getElementById("total").textContent = "—";
+      renderDaySummary(d);
+    } else {
+      dayEl.classList.remove("show");
+      gridEl.style.display = "";
+      renderNormal(d);
     }
-  });
+  }
 
-  document.getElementById("btnSaveSettings").addEventListener("click", function(){
-    var s = state.settings;
-    var newRoom = document.getElementById("setRoom").value.trim();
-    var soundOn = document.getElementById("setSoundEnabled").checked;
-    state.soundEnabled = soundOn;
-    Sound.setEnabled(soundOn);
-    s.startPoints = Number(document.getElementById("setStart").value) || 100;
-    var ratioVal = Number(document.getElementById("setRatio").value);
-    s.ratio = (ratioVal > 0) ? ratioVal : 1;
-    s.headPrize = Number(document.getElementById("setHeadPrize").value) || 10;
-    s.westGate = Number(document.getElementById("setWestGate").value) || 110;
-    s.rankPrize = [
-      Number(document.getElementById("setRank1").value) || 15,
-      Number(document.getElementById("setRank2").value) || 5,
-      Number(document.getElementById("setRank3").value) || -5,
-      Number(document.getElementById("setRank4").value) || -15
-    ];
-    document.querySelectorAll("[data-pname]").forEach(function(inp){
-      var i = Number(inp.getAttribute("data-pname"));
-      s.players[i].name = inp.value.trim() || ("玩家" + (i+1));
-    });
-    document.querySelectorAll("[data-pprio]").forEach(function(inp){
-      var i = Number(inp.getAttribute("data-pprio"));
-      s.players[i].priority = Number(inp.value) || (i+1);
-    });
-    document.querySelectorAll("[data-pavatar]").forEach(function(inp){
-      var i = Number(inp.getAttribute("data-pavatar"));
-      s.players[i].avatar = inp.value.trim();
-    });
-    if (newRoom !== ROOM){
-      ROOM = newRoom;
-      if (ROOM) localStorage.setItem(ROOM_KEY, ROOM);
-      else localStorage.removeItem(ROOM_KEY);
-    }
-    recheckGameEnd();
-    maybeSaveMatch();
-    save(); render();
-    modal.classList.remove("open");
-    setSync(ROOM ? "pending" : "idle");
-    schedulePublish();
-  });
-
-  // 首次任意点击预热音频和语音引擎
-  document.addEventListener("click", function once(){
-    Sound.init();
-    Sound.resume();
-    document.removeEventListener("click", once);
-  }, { capture: true });
-
-  Sound.init();
-  render();
-  setSync(ROOM ? "pending" : "idle");
-  schedulePublish();
+  var es = new EventSource(NTFY + "/sse");
+  es.onopen = function(){
+    statusEl.textContent = "已连接，等待手机端数据…";
+    statusEl.className = "status";
+  };
+  es.onerror = function(){
+    statusEl.textContent = "连接中断，自动重连中…";
+    statusEl.className = "status err";
+  };
+  es.onmessage = function(e){
+    try {
+      var msg = JSON.parse(e.data);
+      if (msg.event !== "message" || !msg.message) return;
+      var data = JSON.parse(msg.message);
+      if (!data.settings || !data.pts || !data.current) return;
+      render(data);
+      statusEl.textContent = "● 已同步";
+      statusEl.className = "status ok";
+    } catch(err){}
+  };
 })();
 </script>
 </body>

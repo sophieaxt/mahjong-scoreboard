@@ -22,7 +22,6 @@ html,body{
 .wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;
   padding:1.5vh 1.5vw;gap:1.2vh}
 
-/* ===== Header ===== */
 header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9vh}
 .chip{display:flex;flex-direction:column;justify-content:center;align-items:center;
   padding:1vh 1.6vw;border-radius:1.2vh;min-width:9vw;
@@ -37,7 +36,6 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .chip.riichi-chip .value{color:var(--red)}
 .chip.total-chip.warn .value{color:var(--red)}
 
-/* ===== 正常比赛网格 ===== */
 .grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.1vh 1.1vw;min-height:0}
 .player{position:relative;background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:2vh 2.2vw;display:flex;flex-direction:column;gap:1.2vh;overflow:hidden;transition:all .3s}
 .player.pos-0{grid-column:1;grid-row:1}
@@ -82,7 +80,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .settle.pos{color:var(--green)}
 .settle.neg{color:var(--red)}
 
-/* ===== 本场结算 ===== */
+/* 本场结算 */
 .match-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1}
 .match-summary.show{display:flex}
 .ms-header{text-align:center;flex-shrink:0}
@@ -112,7 +110,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .ms-settle.neg{color:var(--red)}
 .ms-row.rank1 .ms-settle{font-size:9vh;color:var(--gold);text-shadow:0 0 3vh rgba(251,191,36,.6)}
 
-/* ===== 今日总冠军 ===== */
+/* 今日总冠军 */
 .day-summary{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1;position:relative;overflow:hidden}
 .day-summary.show{display:flex}
 .day-summary::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(251,191,36,.18) 0%,transparent 60%);pointer-events:none}
@@ -158,7 +156,28 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
 .runner-stats{font-size:1.5vh;color:var(--muted);text-align:center}
 .runner-stats b{color:var(--text)}
 
-/* ===== 点炮动画 ===== */
+/* 生涯数据 */
+.career-view{display:none;flex-direction:column;gap:1.5vh;min-height:0;flex:1}
+.career-view.show{display:flex}
+.cv-header{text-align:center;flex-shrink:0}
+.cv-title{font-size:4vh;font-weight:900;color:var(--gold);letter-spacing:.3vw;text-shadow:0 0 4vh rgba(251,191,36,.5)}
+.cv-sub{font-size:1.6vh;color:var(--muted);margin-top:.5vh}
+.cv-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.2vh 1.2vw;min-height:0}
+.cv-card{background:linear-gradient(135deg,rgba(26,34,54,.95),rgba(18,24,40,.95));border:2px solid var(--line);border-radius:2vh;padding:1.8vh 2vw;display:flex;flex-direction:column;gap:1vh;overflow:hidden}
+.cv-top{display:flex;align-items:center;gap:1vw}
+.cv-avatar{width:9vh;height:9vh;border-radius:50%;font-size:4.5vh;font-weight:800;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff;border:2px solid rgba(255,255,255,.15);box-shadow:0 4px 12px rgba(0,0,0,.5);flex-shrink:0}
+.cv-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.cv-name{font-size:2.8vh;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cv-settle{font-size:5.5vh;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.cv-settle.pos{color:var(--green)}
+.cv-settle.neg{color:var(--red)}
+.cv-stats{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:.4vh 1.5vw;font-size:1.6vh;align-content:start}
+.cv-stat{display:flex;justify-content:space-between;padding:.3vh 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.cv-stat .k{color:var(--muted)}
+.cv-stat .v{color:var(--text);font-weight:700}
+.cv-stat .v.hi{color:var(--gold)}
+
+/* 点炮动画 */
 .cannon-shell{
   position:fixed;font-size:6vh;z-index:9999;pointer-events:none;
   transform:translate(-50%,-50%);
@@ -214,7 +233,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
   90%{transform:translate(-1vh,0) rotate(-2deg)}
 }
 
-/* ===== 自摸金币动画 ===== */
+/* 自摸金币动画 */
 .coin-fly{
   position:fixed;font-size:6vh;z-index:9999;pointer-events:none;
   transform:translate(-50%,-50%);
@@ -289,6 +308,14 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     <div class="runners-area" id="runnersArea"></div>
   </div>
 
+  <div class="career-view" id="careerView">
+    <div class="cv-header">
+      <div class="cv-title">📊 生涯数据</div>
+      <div class="cv-sub">仅统计已完成的场次 · 立直率从新版本开始记录</div>
+    </div>
+    <div class="cv-grid" id="cvGrid"></div>
+  </div>
+
   <div class="status" id="status">等待手机端数据…</div>
 </div>
 
@@ -330,7 +357,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     });
   }
 
-   function avatarInner(p){
+  function avatarInner(p){
     var a = (p.avatar || "").trim();
     var ch = (p.name || "?").trim().charAt(0) || "?";
     if (/^https?:\/\//i.test(a)){
@@ -364,6 +391,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     document.getElementById("grid").style.display = "";
     document.getElementById("matchSummary").classList.remove("show");
     document.getElementById("daySummary").classList.remove("show");
+    document.getElementById("careerView").classList.remove("show");
     renderNormal(d);
   }
 
@@ -582,6 +610,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     document.getElementById("mainHeader").style.display = "none";
     document.getElementById("grid").style.display = "none";
     document.getElementById("daySummary").classList.remove("show");
+    document.getElementById("careerView").classList.remove("show");
     document.getElementById("matchSummary").classList.add("show");
 
     var displayRound = (typeof d.displayRound === "number" && d.displayRound > 0) ? d.displayRound : d.currentRound;
@@ -641,6 +670,7 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     document.getElementById("mainHeader").style.display = "none";
     document.getElementById("grid").style.display = "none";
     document.getElementById("matchSummary").classList.remove("show");
+    document.getElementById("careerView").classList.remove("show");
     document.getElementById("daySummary").classList.add("show");
 
     document.getElementById("dsDate").textContent = d.dayEndedAt ? formatDate(d.dayEndedAt) : "";
@@ -696,8 +726,65 @@ header{display:flex;justify-content:center;align-items:stretch;gap:1vw;height:9v
     createConfetti();
   }
 
+  /* ===== 生涯数据 ===== */
+  function showCareer(d){
+    document.getElementById("mainHeader").style.display = "none";
+    document.getElementById("grid").style.display = "none";
+    document.getElementById("matchSummary").classList.remove("show");
+    document.getElementById("daySummary").classList.remove("show");
+    document.getElementById("careerView").classList.add("show");
+
+    var list = d.careerStats || [];
+    var hasData = list.length > 0 && list[0].matches > 0;
+    var grid = document.getElementById("cvGrid");
+
+    if (!hasData){
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:2.4vh;padding-top:10vh">暂无历史数据<br><span style="font-size:1.6vh">完成至少一场东南战后显示</span></div>';
+      return;
+    }
+
+    grid.innerHTML = "";
+    list.forEach(function(st, i){
+      var card = document.createElement("div");
+      card.className = "cv-card";
+
+      var settleCls = st.totalSettle > 0 ? "pos" : (st.totalSettle < 0 ? "neg" : "");
+      var sign = st.totalSettle > 0 ? "+" : "";
+      var avBg = AVATAR_COLORS[i % AVATAR_COLORS.length];
+
+      function pct(v){ return (v * 100).toFixed(1) + "%"; }
+      function num(v, digits){ return v.toFixed(digits || 2); }
+
+      card.innerHTML =
+        '<div class="cv-top">' +
+          '<div class="cv-avatar" style="background:' + avBg + '">' + avatarInner(st) + '</div>' +
+          '<div class="cv-name">' + escapeHtml(st.name) + '</div>' +
+        '</div>' +
+        '<div class="cv-settle ' + settleCls + '">' + sign + st.totalSettle + '</div>' +
+        '<div class="cv-stats">' +
+          '<div class="cv-stat"><span class="k">场次</span><span class="v">' + st.matches + '</span></div>' +
+          '<div class="cv-stat"><span class="k">平均顺位</span><span class="v hi">' + num(st.avgRank) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">一位率</span><span class="v">' + pct(st.firstRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">二位率</span><span class="v">' + pct(st.secondRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">三位率</span><span class="v">' + pct(st.thirdRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">四位率</span><span class="v">' + pct(st.fourthRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">和了率</span><span class="v">' + pct(st.winRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">放铳率</span><span class="v">' + pct(st.dealInRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">自摸率</span><span class="v">' + pct(st.tsumoRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">立直率</span><span class="v">' + pct(st.riichiRate) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">平均翻数</span><span class="v">' + num(st.avgHan, 1) + '</span></div>' +
+          '<div class="cv-stat"><span class="k">平均得点</span><span class="v">' + st.avgPts + '</span></div>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  }
+
   /* ===== 总渲染 ===== */
   function render(d){
+    if (d.showStats && d.careerStats && d.careerStats.length > 0){
+      showCareer(d);
+      return;
+    }
     if (d.dayEnded && d.daySummary && d.daySummary.length > 0){
       showDaySummary(d);
       return;

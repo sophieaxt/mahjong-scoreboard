@@ -167,6 +167,15 @@ form.input.locked{opacity:.4;pointer-events:none}
 .ds-total{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
 .ds-total.pos{color:var(--green)}
 .ds-total.neg{color:var(--red)}
+/* 生涯弹窗专用 */
+.career-card{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;background:rgba(255,255,255,.02)}
+.career-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.career-av{width:40px;height:40px;border-radius:50%;font-size:20px;display:flex;align-items:center;justify-content:center;background:#334155;overflow:hidden}
+.career-av img{width:100%;height:100%;object-fit:cover}
+.career-name{font-weight:800;font-size:15px;flex:1}
+.career-settle{font-weight:900;font-size:18px}
+.career-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px;color:var(--muted)}
+.career-grid span b{color:var(--text)}
 </style>
 </head>
 <body>
@@ -205,6 +214,7 @@ form.input.locked{opacity:.4;pointer-events:none}
   <div id="records"></div>
   <div class="toolbar">
     <button id="btnSettings">设置</button>
+    <button id="btnCareer">生涯</button>
     <button id="btnHistory">战绩</button>
     <button id="btnExport">导出</button>
     <button id="btnImport">导入</button>
@@ -261,6 +271,17 @@ form.input.locked{opacity:.4;pointer-events:none}
     <button class="submit" type="submit">记录</button>
   </div>
 </form>
+
+<div class="modal" id="careerModal">
+  <div class="sheet">
+    <h2>生涯数据</h2>
+    <div class="hint" style="margin-bottom:10px;color:#fcd34d">仅统计已完成的场次 · 立直率从本次更新后开始记录</div>
+    <div id="careerList"></div>
+    <div class="actions">
+      <button class="cancel" id="btnCloseCareer">关闭</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="historyModal">
   <div class="sheet">
@@ -338,7 +359,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 
     <div class="profile-notice">
       <b>玩家名和头像已写死在代码里</b><br>
-      要改名/换头像，请编辑 <code>index.html</code> 中的 <code>DEFAULT.settings.players</code> 并重新部署。此处只能改座位号，名字和头像的修改刷新后会恢复为代码里的值。
+      要改名/换头像，请编辑 <code>index.html</code> 中的 <code>DEFAULT.settings.players</code> 并重新部署。
     </div>
 
     <div id="playerFields"></div>
@@ -354,7 +375,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v22";
+  var STORAGE_KEY = "mahjong_scoreboard_v23";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -392,7 +413,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     soundEnabled: true,
     soundUrl: DEFAULT_SOUND_URL,
     lastWinAnim: null,
-    lastTsumoAnim: null
+    lastTsumoAnim: null,
+    showStats: false
   };
 
   var Sound = (function(){
@@ -499,7 +521,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v21","mahjong_scoreboard_v20","mahjong_scoreboard_v19"];
+        var keys = ["mahjong_scoreboard_v22","mahjong_scoreboard_v21"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -521,6 +543,7 @@ form.input.locked{opacity:.4;pointer-events:none}
                 if (Array.isArray(old.records)) old.records.forEach(function(r){ r.renchan = (r.renchan === true); });
                 if (!old.lastWinAnim) old.lastWinAnim = null;
                 if (!old.lastTsumoAnim) old.lastTsumoAnim = null;
+                old.showStats = false;
                 Sound.setEnabled(old.soundEnabled);
                 Sound.setUrl(old.soundUrl);
                 return applyDefaultPlayerProfile(old);
@@ -551,6 +574,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
       if (!data.lastWinAnim) data.lastWinAnim = null;
       if (!data.lastTsumoAnim) data.lastTsumoAnim = null;
+      data.showStats = false;
       Sound.setEnabled(data.soundEnabled);
       Sound.setUrl(data.soundUrl);
       return applyDefaultPlayerProfile(data);
@@ -569,6 +593,97 @@ form.input.locked{opacity:.4;pointer-events:none}
   var selectedLoser = -1;
   var tenpai = [false, false, false, false];
   var lastFocusedWinnerIdx = -1;
+
+  function computeCareerStats(){
+    var s = state.settings;
+    var stats = s.players.map(function(p){
+      return {
+        name: p.name, avatar: p.avatar || "",
+        matches: 0, totalSettle: 0, totalPts: 0,
+        rankCount: [0,0,0,0],
+        rounds: 0, winCount: 0, tsumoCount: 0, ronCount: 0,
+        dealInCount: 0, riichiCount: 0, hanSum: 0
+      };
+    });
+
+    // 【手动录入的 4 场图片数据】
+    var manualBase = [
+      { totalSettle: 385, rankCount: [3, 1, 0, 0] }, // 荣
+      { totalSettle: -292, rankCount: [0, 1, 1, 2] }, // 颖
+      { totalSettle: -208, rankCount: [0, 2, 1, 1] }, // 雯
+      { totalSettle: 115, rankCount: [1, 0, 2, 1] }   // 马
+    ];
+
+    for (var i = 0; i < 4; i++){
+      stats[i].matches += 4;
+      stats[i].totalSettle += manualBase[i].totalSettle;
+      stats[i].totalPts += (100 * 4 + manualBase[i].totalSettle); 
+      for (var k = 0; k < 4; k++){
+        stats[i].rankCount[k] += manualBase[i].rankCount[k];
+      }
+    }
+
+    state.history.forEach(function(match){
+      (match.players || []).forEach(function(mp, mi){
+        if (mi >= 4) return;
+        stats[mi].matches += 1;
+        stats[mi].totalSettle += (Number(mp.settle) || 0);
+        stats[mi].totalPts += (Number(mp.pts) || 0);
+        if (mp.rank >= 1 && mp.rank <= 4) stats[mi].rankCount[mp.rank - 1] += 1;
+      });
+
+      (match.records || []).forEach(function(r){
+        for (var i = 0; i < 4; i++) stats[i].rounds += 1;
+
+        var winners = r.winners || [];
+        var losers = r.losers || [];
+        var riichis = r.riichis;
+
+        if (Array.isArray(riichis)){
+          for (var i = 0; i < 4; i++){
+            if (riichis[i]) stats[i].riichiCount += 1;
+          }
+        }
+
+        winners.forEach(function(w){
+          if (typeof w.idx === "number" && w.idx >= 0 && w.idx < 4){
+            stats[w.idx].winCount += 1;
+            stats[w.idx].hanSum += (Number(w.han) || 0);
+            if (r.mode === "tsumo") stats[w.idx].tsumoCount += 1;
+            else if (r.mode === "ron") stats[w.idx].ronCount += 1;
+          }
+        });
+
+        losers.forEach(function(li){
+          if (typeof li === "number" && li >= 0 && li < 4){
+            stats[li].dealInCount += 1;
+          }
+        });
+      });
+    });
+
+    return stats.map(function(st){
+      var m = st.matches, r = st.rounds, w = st.winCount;
+      return {
+        name: st.name,
+        avatar: st.avatar,
+        matches: m,
+        totalSettle: st.totalSettle,
+        avgPts: m > 0 ? Math.round(st.totalPts / m) : 0,
+        avgRank: m > 0 ? (st.rankCount[0]*1 + st.rankCount[1]*2 + st.rankCount[2]*3 + st.rankCount[3]*4) / m : 0,
+        firstRate: m > 0 ? st.rankCount[0] / m : 0,
+        secondRate: m > 0 ? st.rankCount[1] / m : 0,
+        thirdRate: m > 0 ? st.rankCount[2] / m : 0,
+        fourthRate: m > 0 ? st.rankCount[3] / m : 0,
+        rankCount: st.rankCount,
+        winRate: r > 0 ? w / r : 0,
+        tsumoRate: w > 0 ? st.tsumoCount / w : 0,
+        dealInRate: r > 0 ? st.dealInCount / r : 0,
+        riichiRate: r > 0 ? st.riichiCount / r : 0,
+        avgHan: w > 0 ? st.hanSum / w : 0
+      };
+    });
+  }
 
   function initRoom(){
     var params = new URLSearchParams(location.search);
@@ -600,7 +715,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 22, settings: state.settings, pts: c.pts, current: state.current,
+      v: 23, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -610,7 +725,9 @@ form.input.locked{opacity:.4;pointer-events:none}
       dayEnded: state.dayEnded, daySummary: state.daySummary || [],
       dayEndedAt: state.dayEndedAt || "",
       lastWinAnim: state.lastWinAnim || null,
-      lastTsumoAnim: state.lastTsumoAnim || null
+      lastTsumoAnim: state.lastTsumoAnim || null,
+      showStats: state.showStats || false,
+      careerStats: state.showStats ? computeCareerStats() : null
     };
     fetch(NTFY_BASE + encodeURIComponent(ROOM), {
       method: "POST",
@@ -1307,6 +1424,47 @@ form.input.locked{opacity:.4;pointer-events:none}
     modal.classList.add("open");
   }
 
+  function openCareerModal(){
+    var listEl = document.getElementById("careerList");
+    var stats = computeCareerStats();
+    listEl.innerHTML = "";
+    
+    stats.forEach(function(st, i){
+      var div = document.createElement("div");
+      div.className = "career-card";
+      var settleCls = st.totalSettle > 0 ? "pos" : (st.totalSettle < 0 ? "neg" : "");
+      var sign = st.totalSettle > 0 ? "+" : "";
+      var avBg = avatarBg(st, i);
+      
+      function pct(v){ return (v * 100).toFixed(1) + "%"; }
+      function num(v, digits){ return v.toFixed(digits || 2); }
+
+      div.innerHTML = 
+        '<div class="career-head">' +
+          '<div class="career-av" style="background:' + avBg + '">' + avatarInner(st, i) + '</div>' +
+          '<div class="career-name">' + escapeHtml(st.name) + '</div>' +
+          '<div class="career-settle ' + settleCls + '">' + sign + st.totalSettle + '</div>' +
+        '</div>' +
+        '<div class="career-grid">' +
+          '<span>场次: <b>' + st.matches + '</b></span>' +
+          '<span>平均顺位: <b>' + num(st.avgRank) + '</b></span>' +
+          '<span>一位率: <b>' + pct(st.firstRate) + '</b></span>' +
+          '<span>二位率: <b>' + pct(st.secondRate) + '</b></span>' +
+          '<span>三位率: <b>' + pct(st.thirdRate) + '</b></span>' +
+          '<span>四位率: <b>' + pct(st.fourthRate) + '</b></span>' +
+          '<span>和了率: <b>' + pct(st.winRate) + '</b></span>' +
+          '<span>放铳率: <b>' + pct(st.dealInRate) + '</b></span>' +
+          '<span>自摸率: <b>' + pct(st.tsumoRate) + '</b></span>' +
+          '<span>立直率: <b>' + pct(st.riichiRate) + '</b></span>' +
+          '<span>平均翻数: <b>' + num(st.avgHan, 1) + '</b></span>' +
+          '<span>平均得点: <b>' + st.avgPts + '</b></span>' +
+        '</div>';
+      listEl.appendChild(div);
+    });
+    
+    document.getElementById("careerModal").classList.add("open");
+  }
+
   function openHistory(){
     var modal = document.getElementById("historyModal");
     var list = document.getElementById("historyList");
@@ -1602,7 +1760,8 @@ form.input.locked{opacity:.4;pointer-events:none}
     var record = {
       mode: currentMode, changes: changes, renchan: renchan, note: note,
       losers: currentMode === "ron" ? [selectedLoser] : [],
-      winners: winnersForRecord, riichiCount: riichiCount, tenpai: tenpai.slice()
+      winners: winnersForRecord, riichiCount: riichiCount, tenpai: tenpai.slice(),
+      riichis: state.current.riichi.slice()
     };
     record.winner = winnersForRecord.length > 0 ? winnersForRecord[0].idx : -1;
     record.han = winnersForRecord.length > 0 ? winnersForRecord[0].han : 0;
@@ -1703,6 +1862,18 @@ form.input.locked{opacity:.4;pointer-events:none}
     save(); render();
   });
 
+  document.getElementById("btnCareer").addEventListener("click", function(){
+    state.showStats = true;
+    save(); render();
+    openCareerModal();
+  });
+
+  document.getElementById("btnCloseCareer").addEventListener("click", function(){
+    state.showStats = false;
+    save(); render();
+    document.getElementById("careerModal").classList.remove("open");
+  });
+
   document.getElementById("btnEndDay").addEventListener("click", endDay);
   document.getElementById("btnHistory").addEventListener("click", openHistory);
   document.getElementById("btnCloseHistory").addEventListener("click", function(){ document.getElementById("historyModal").classList.remove("open"); });
@@ -1765,6 +1936,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (Array.isArray(data.records)) data.records.forEach(function(r){ r.renchan = (r.renchan === true); });
           if (!data.lastWinAnim) data.lastWinAnim = null;
           if (!data.lastTsumoAnim) data.lastTsumoAnim = null;
+          data.showStats = false;
           state = applyDefaultPlayerProfile(data);
           Sound.setEnabled(state.soundEnabled);
           Sound.setUrl(state.soundUrl);

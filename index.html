@@ -375,7 +375,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v23";
+  var STORAGE_KEY = "mahjong_scoreboard_v24";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -409,6 +409,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     current: { riichi: [false, false, false, false] },
     gameEnded: false, endReason: "", finalRound: 0,
     history: [], matchSaved: false,
+    careerHistory: [], // 用于永久保存生涯历史
     dayEnded: false, daySummary: [], dayEndedAt: "",
     soundEnabled: true,
     soundUrl: DEFAULT_SOUND_URL,
@@ -521,7 +522,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v22","mahjong_scoreboard_v21"];
+        var keys = ["mahjong_scoreboard_v23","mahjong_scoreboard_v22"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -535,6 +536,7 @@ form.input.locked{opacity:.4;pointer-events:none}
                 if (!old.gameEnded) old.endReason = "";
                 if (typeof old.finalRound !== "number") old.finalRound = 0;
                 if (!Array.isArray(old.history)) old.history = [];
+                if (!Array.isArray(old.careerHistory)) old.careerHistory = JSON.parse(JSON.stringify(old.history)); // 旧数据迁移
                 if (typeof old.matchSaved !== "boolean") old.matchSaved = false;
                 if (!old.dayEnded) old.daySummary = [];
                 if (typeof old.dayEndedAt !== "string") old.dayEndedAt = "";
@@ -565,6 +567,7 @@ form.input.locked{opacity:.4;pointer-events:none}
       if (typeof data.endReason !== "string") data.endReason = "";
       if (typeof data.finalRound !== "number") data.finalRound = 0;
       if (!Array.isArray(data.history)) data.history = [];
+      if (!Array.isArray(data.careerHistory)) data.careerHistory = JSON.parse(JSON.stringify(data.history));
       if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
       if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
       if (!Array.isArray(data.daySummary)) data.daySummary = [];
@@ -606,12 +609,11 @@ form.input.locked{opacity:.4;pointer-events:none}
       };
     });
 
-    // 【手动录入的 4 场图片数据】
     var manualBase = [
-      { totalSettle: 385, rankCount: [3, 1, 0, 0] }, // 荣
-      { totalSettle: -292, rankCount: [0, 1, 1, 2] }, // 颖
-      { totalSettle: -208, rankCount: [0, 2, 1, 1] }, // 雯
-      { totalSettle: 115, rankCount: [1, 0, 2, 1] }   // 马
+      { totalSettle: 385, rankCount: [3, 1, 0, 0] },
+      { totalSettle: -292, rankCount: [0, 1, 1, 2] },
+      { totalSettle: -208, rankCount: [0, 2, 1, 1] },
+      { totalSettle: 115, rankCount: [1, 0, 2, 1] }
     ];
 
     for (var i = 0; i < 4; i++){
@@ -623,7 +625,10 @@ form.input.locked{opacity:.4;pointer-events:none}
       }
     }
 
-    state.history.forEach(function(match){
+    // 【关键修复】使用 careerHistory 而非 history
+    var sourceHistory = state.careerHistory || [];
+
+    sourceHistory.forEach(function(match){
       (match.players || []).forEach(function(mp, mi){
         if (mi >= 4) return;
         stats[mi].matches += 1;
@@ -715,7 +720,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 23, settings: state.settings, pts: c.pts, current: state.current,
+      v: 24, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -1218,7 +1223,11 @@ form.input.locked{opacity:.4;pointer-events:none}
         var msg = wasSaved ? "删除这条记录？已保存的战绩也会被移除。" : "删除这条记录？";
         if (!confirm(msg)) return;
         state.records.splice(i, 1);
-        if (wasSaved){ state.history.shift(); state.matchSaved = false; }
+        if (wasSaved){ 
+          state.history.shift(); 
+          if (state.careerHistory && state.careerHistory.length > 0) state.careerHistory.shift();
+          state.matchSaved = false; 
+        }
         state.carryover = recalcCarryover();
         recheckGameEnd();
         maybeSaveMatch();
@@ -1283,9 +1292,17 @@ form.input.locked{opacity:.4;pointer-events:none}
       }),
       records: JSON.parse(JSON.stringify(state.records))
     };
+
+    // 存入今日 history
     if (!state.history) state.history = [];
     state.history.unshift(match);
     if (state.history.length > 50) state.history = state.history.slice(0, 50);
+
+    // 【新增】同时存入 careerHistory，永不自动清空
+    if (!state.careerHistory) state.careerHistory = [];
+    state.careerHistory.unshift(JSON.parse(JSON.stringify(match)));
+    if (state.careerHistory.length > 1000) state.careerHistory = state.careerHistory.slice(0, 1000);
+
     state.matchSaved = true;
   }
 
@@ -1367,7 +1384,9 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.records = []; state.carryover = 0;
     state.current = { riichi: [false, false, false, false] };
     state.gameEnded = false; state.endReason = ""; state.finalRound = 0; state.matchSaved = false;
-    state.history = []; state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
+    state.history = []; // 清空今日战绩
+    // 注意：state.careerHistory 保留，作为永久生涯数据
+    state.dayEnded = false; state.daySummary = []; state.dayEndedAt = "";
     state.lastWinAnim = null; state.lastTsumoAnim = null;
     selectedWinners = []; selectedLoser = -1;
     tenpai = [false, false, false, false];
@@ -1469,8 +1488,9 @@ form.input.locked{opacity:.4;pointer-events:none}
     var modal = document.getElementById("historyModal");
     var list = document.getElementById("historyList");
     list.innerHTML = "";
+    // 这里的列表只展示当天的 history
     if (!state.history || state.history.length === 0){
-      list.innerHTML = '<div class="history-empty">暂无历史战绩</div>';
+      list.innerHTML = '<div class="history-empty">今日暂无战绩</div>';
     } else {
       state.history.forEach(function(m){
         var div = document.createElement("div");
@@ -1852,7 +1872,11 @@ form.input.locked{opacity:.4;pointer-events:none}
     var msg = wasSaved ? "撤销最后一局？已保存的战绩也会被移除。" : "撤销最后一局？";
     if (!confirm(msg)) return;
     state.records.pop();
-    if (wasSaved){ state.history.shift(); state.matchSaved = false; }
+    if (wasSaved){ 
+      state.history.shift(); 
+      if (state.careerHistory && state.careerHistory.length > 0) state.careerHistory.shift();
+      state.matchSaved = false; 
+    }
     state.carryover = recalcCarryover();
     state.current.riichi = [false, false, false, false];
     state.lastWinAnim = null;
@@ -1927,6 +1951,7 @@ form.input.locked{opacity:.4;pointer-events:none}
           if (typeof data.endReason !== "string") data.endReason = "";
           if (typeof data.finalRound !== "number") data.finalRound = 0;
           if (!Array.isArray(data.history)) data.history = [];
+          if (!Array.isArray(data.careerHistory)) data.careerHistory = JSON.parse(JSON.stringify(data.history));
           if (typeof data.matchSaved !== "boolean") data.matchSaved = false;
           if (typeof data.dayEnded !== "boolean") data.dayEnded = false;
           if (!Array.isArray(data.daySummary)) data.daySummary = [];

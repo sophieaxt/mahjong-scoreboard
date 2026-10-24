@@ -375,7 +375,7 @@ form.input.locked{opacity:.4;pointer-events:none}
 (function(){
   "use strict";
 
-  var STORAGE_KEY = "mahjong_scoreboard_v24";
+  var STORAGE_KEY = "mahjong_scoreboard_v25";
   var ROOM_KEY = "mahjong_room_v1";
   var NTFY_BASE = "https://ntfy.sh/";
   var RIICHI_VALUE = 4;
@@ -522,7 +522,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw){
-        var keys = ["mahjong_scoreboard_v23","mahjong_scoreboard_v22"];
+        var keys = ["mahjong_scoreboard_v24","mahjong_scoreboard_v23","mahjong_scoreboard_v22"];
         for (var k = 0; k < keys.length; k++){
           var oldRaw = localStorage.getItem(keys[k]);
           if (oldRaw){
@@ -536,7 +536,7 @@ form.input.locked{opacity:.4;pointer-events:none}
                 if (!old.gameEnded) old.endReason = "";
                 if (typeof old.finalRound !== "number") old.finalRound = 0;
                 if (!Array.isArray(old.history)) old.history = [];
-                if (!Array.isArray(old.careerHistory)) old.careerHistory = JSON.parse(JSON.stringify(old.history)); // 旧数据迁移
+                if (!Array.isArray(old.careerHistory)) old.careerHistory = JSON.parse(JSON.stringify(old.history)); 
                 if (typeof old.matchSaved !== "boolean") old.matchSaved = false;
                 if (!old.dayEnded) old.daySummary = [];
                 if (typeof old.dayEndedAt !== "string") old.dayEndedAt = "";
@@ -625,7 +625,6 @@ form.input.locked{opacity:.4;pointer-events:none}
       }
     }
 
-    // 【关键修复】使用 careerHistory 而非 history
     var sourceHistory = state.careerHistory || [];
 
     sourceHistory.forEach(function(match){
@@ -720,7 +719,7 @@ form.input.locked{opacity:.4;pointer-events:none}
     setSync("pending");
     var c = compute();
     var publishState = {
-      v: 24, settings: state.settings, pts: c.pts, current: state.current,
+      v: 25, settings: state.settings, pts: c.pts, current: state.current,
       carryover: state.carryover, currentRound: c.currentRound,
       displayRound: c.displayRound,
       renchan: c.renchan, dealerIdx: c.dealerIdx, ranks: c.ranks,
@@ -1293,12 +1292,10 @@ form.input.locked{opacity:.4;pointer-events:none}
       records: JSON.parse(JSON.stringify(state.records))
     };
 
-    // 存入今日 history
     if (!state.history) state.history = [];
     state.history.unshift(match);
     if (state.history.length > 50) state.history = state.history.slice(0, 50);
 
-    // 【新增】同时存入 careerHistory，永不自动清空
     if (!state.careerHistory) state.careerHistory = [];
     state.careerHistory.unshift(JSON.parse(JSON.stringify(match)));
     if (state.careerHistory.length > 1000) state.careerHistory = state.careerHistory.slice(0, 1000);
@@ -1376,7 +1373,25 @@ form.input.locked{opacity:.4;pointer-events:none}
     state.dayEnded = true;
     state.dayEndedAt = new Date().toISOString();
     state.lastWinAnim = null; state.lastTsumoAnim = null;
-    save(); render(); schedulePublish(); openDaySummary();
+    save(); render(); schedulePublish();
+
+    // --- 自动导出备份开始 ---
+    try {
+      var dataStr = JSON.stringify(state, null, 2);
+      var blob = new Blob([dataStr], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      var dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = "mahjong_backup_" + dateStr + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch(e){}
+    // --- 自动导出备份结束 ---
+
+    openDaySummary();
   }
 
   function startNewDay(){
